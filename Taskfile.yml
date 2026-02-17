@@ -1,0 +1,33 @@
+# yaml-language-server: $schema=https://taskfile.dev/schema.json
+
+version: '3'
+
+vars:
+  EXENAME: afxw-his.exe
+  VERSION:
+    sh: git describe --tags --always --dirty || echo dev
+
+tasks:
+  build:
+    cmds:
+      - task: build-his
+      - task: build-bm
+      - task: build-zox
+  build-his:
+    cmds:
+      - go build -ldflags="-s -w -X main.version={{.VERSION}}" -o bin/{{.EXENAME}} ./cmd/afxw-his
+  build-bm:
+    cmds:
+      - go build -ldflags="-s -w -X main.version={{.VERSION}}" -o bin/afxw-bm.exe ./cmd/afxw-bm
+  build-zox:
+    cmds:
+      - go build -ldflags="-s -w -X main.version={{.VERSION}}" -o bin/afxw-zox.exe ./cmd/afxw-zox
+  lint:
+    cmds:
+      - golangci-lint run ./...
+  test:
+    cmds:
+      - go test ./...
+  integration-test:
+    cmds:
+      - go test -tags=integration ./...
