@@ -2,7 +2,6 @@ package main
 
 import (
 	"context"
-	"errors"
 	"fmt"
 	"os"
 	"os/exec"
@@ -138,9 +137,6 @@ func main() {
 // run はメインロジックを実行します。
 func run() error {
 	if err := singleinstance.Acquire("afxw-launcher"); err != nil {
-		if errors.Is(err, singleinstance.ErrAlreadyRunning) {
-			return nil
-		}
 		return err
 	}
 

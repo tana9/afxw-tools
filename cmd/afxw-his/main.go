@@ -30,9 +30,6 @@ func main() {
 		},
 		Action: func(ctx context.Context, cmd *cli.Command) error {
 			if err := singleinstance.Acquire("afxw-his"); err != nil {
-				if errors.Is(err, singleinstance.ErrAlreadyRunning) {
-					return nil
-				}
 				return err
 			}
 

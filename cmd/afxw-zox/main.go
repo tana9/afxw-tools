@@ -23,9 +23,6 @@ func main() {
 		Version: version,
 		Action: func(ctx context.Context, cmd *cli.Command) error {
 			if err := singleinstance.Acquire("afxw-zox"); err != nil {
-				if errors.Is(err, singleinstance.ErrAlreadyRunning) {
-					return nil
-				}
 				return err
 			}
 

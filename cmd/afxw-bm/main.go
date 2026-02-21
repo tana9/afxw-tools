@@ -54,9 +54,6 @@ func main() {
 
 			// デフォルト動作: ブックマーク選択
 			if err := singleinstance.Acquire("afxw-bm"); err != nil {
-				if errors.Is(err, singleinstance.ErrAlreadyRunning) {
-					return nil
-				}
 				return err
 			}
 
