@@ -52,7 +52,18 @@ func main() {
 			}
 
 			// デフォルト動作: ブックマーク選択
-			return runSelect()
+			bmPath, err := bookmark.GetDefaultPath()
+			if err != nil {
+				return fmt.Errorf("ブックマークファイルのパス取得に失敗しました: %w", err)
+			}
+
+			a, err := afx.NewOleAFX()
+			if err != nil {
+				return fmt.Errorf("afxw.obj への接続に失敗しました: %w", err)
+			}
+			defer a.Close()
+
+			return runSelect(a, &finder.GoFuzzyFinder{}, bmPath)
 		},
 	}
 
@@ -83,12 +94,7 @@ func addBookmark(path string) error {
 	return nil
 }
 
-func runSelect() error {
-	bmPath, err := bookmark.GetDefaultPath()
-	if err != nil {
-		return fmt.Errorf("ブックマークファイルのパス取得に失敗しました: %w", err)
-	}
-
+func runSelect(a afx.AFX, f finder.Finder, bmPath string) error {
 	dirs, err := bookmark.Load(bmPath)
 	if err != nil {
 		return fmt.Errorf("ブックマークの読み込みに失敗しました: %w", err)
@@ -99,7 +105,6 @@ func runSelect() error {
 		return nil
 	}
 
-	f := &finder.GoFuzzyFinder{}
 	idx, err := f.Find(dirs)
 	if err != nil {
 		// ESCやCtrl+Cでキャンセルされた場合は正常終了
@@ -109,15 +114,7 @@ func runSelect() error {
 		return err
 	}
 
-	targetDir := dirs[idx]
-
-	a, err := afx.NewOleAFX()
-	if err != nil {
-		return fmt.Errorf("afxw.obj への接続に失敗しました: %w", err)
-	}
-	defer a.Close()
-
-	if err := a.EXCD(targetDir); err != nil {
+	if err := a.EXCD(dirs[idx]); err != nil {
 		return fmt.Errorf("ディレクトリ移動に失敗しました: %w", err)
 	}
 
