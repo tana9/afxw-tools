@@ -72,6 +72,9 @@ func run(a afx.AFX, f finder.Finder, wins []int) error {
 		return fmt.Errorf("履歴の取得に失敗しました: %w", err)
 	}
 
+	// 重複を除去
+	dirs = removeDuplicates(dirs)
+
 	// 候補がなければ何もしない
 	if len(dirs) == 0 {
 		return nil
@@ -93,4 +96,19 @@ func run(a afx.AFX, f finder.Finder, wins []int) error {
 	}
 
 	return nil
+}
+
+// removeDuplicates はスライスから重複を除去します。出現順序を保持します。
+func removeDuplicates(dirs []string) []string {
+	seen := make(map[string]bool)
+	result := make([]string, 0, len(dirs))
+
+	for _, dir := range dirs {
+		if !seen[dir] {
+			seen[dir] = true
+			result = append(result, dir)
+		}
+	}
+
+	return result
 }
