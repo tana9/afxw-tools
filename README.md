@@ -104,6 +104,10 @@ zoxideのfrecency（頻度×最近性）データベースから選択してあ�
 ```bash
 # zoxideのデータベースから選択して移動
 afxw-zox.exe
+
+# あふwの履歴をzoxideデータベースにインポート
+afxw-zox.exe -i
+afxw-zox.exe --import-history
 ```
 
 ## 推奨設定
