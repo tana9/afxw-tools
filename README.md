@@ -13,6 +13,16 @@
 afxw-launcher.exe
 ```
 
+**キー操作:**
+
+| キー | 動作 |
+|------|------|
+| ↑ / k | 上に移動 |
+| ↓ / j | 下に移動 |
+| 1〜9 | 番号で直接選択・実行 |
+| Enter | 選択して実行 |
+| q / Esc / Ctrl+C | 終了 |
+
 **設定ファイル:**
 初回起動時に `~/.config/afxw-launcher/config.toml` が自動作成されます。
 または実行ファイルと同じディレクトリに `config.toml` を配置することもできます。
@@ -25,22 +35,22 @@ command = "afxw-his.exe"
 args = []
 
 [[menu]]
-name = "ブックマークから選択"
-description = "ブックマークから選択して移動"
-command = "afxw-bm.exe"
-args = []
-
-[[menu]]
 name = "zoxideから選択"
 description = "zoxideのfrecencyデータベースから選択して移動"
 command = "afxw-zox.exe"
 args = []
 
 [[menu]]
+name = "ブックマークから選択"
+description = "ブックマークから選択して移動"
+command = "afxw-bm.exe"
+args = []
+
+[[menu]]
 name = "ブックマークを追加"
 description = "現在のディレクトリをブックマークに追加"
 command = "afxw-bm.exe"
-args = ["-a"]
+args = ["-a", ""]
 
 # カスタムツールの追加例
 [[menu]]
@@ -76,11 +86,11 @@ afxw-his.exe --window right
 # ブックマークから選択して移動
 afxw-bm.exe
 
-# 現在のディレクトリをブックマークに追加
-afxw-bm.exe --add
+# あふwのアクティブパスをブックマークに追加
+afxw-bm.exe -a
 
 # 指定したパスをブックマークに追加
-afxw-bm.exe --add C:\path\to\directory
+afxw-bm.exe -a C:\path\to\directory
 ```
 
 ### afxw-zox
