@@ -75,6 +75,14 @@ func (m model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		case "enter":
 			m.selected = true
 			return m, tea.Quit
+
+		case "1", "2", "3", "4", "5", "6", "7", "8", "9":
+			idx := int(msg.String()[0] - '1')
+			if idx < len(m.cfg.Menu) {
+				m.cursor = idx
+				m.selected = true
+				return m, tea.Quit
+			}
 		}
 	}
 
@@ -104,7 +112,7 @@ func (m model) View() string {
 	}
 
 	s += "\n"
-	s += helpStyle.Render("↑/k: 上, ↓/j: 下, Enter: 実行, q/Esc: 終了")
+	s += helpStyle.Render("↑/k: 上, ↓/j: 下, Enter: 実行, 1-9: 番号で選択, q/Esc: 終了")
 
 	return s
 }
