@@ -2,9 +2,11 @@ package main
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"os"
 
+	"github.com/ktr0731/go-fuzzyfinder"
 	"github.com/tana9/afxw-tools/internal/afx"
 	"github.com/tana9/afxw-tools/internal/finder"
 	"github.com/tana9/afxw-tools/internal/zoxide"
@@ -59,6 +61,10 @@ func run() error {
 	f := &finder.GoFuzzyFinder{}
 	idx, err := f.Find(paths)
 	if err != nil {
+		// ESCやCtrl+Cでキャンセルされた場合は正常終了
+		if errors.Is(err, fuzzyfinder.ErrAbort) {
+			return nil
+		}
 		return err
 	}
 

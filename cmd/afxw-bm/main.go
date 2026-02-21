@@ -2,10 +2,12 @@ package main
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"os"
 	"path/filepath"
 
+	"github.com/ktr0731/go-fuzzyfinder"
 	"github.com/tana9/afxw-tools/internal/afx"
 	"github.com/tana9/afxw-tools/internal/bookmark"
 	"github.com/tana9/afxw-tools/internal/finder"
@@ -100,7 +102,11 @@ func runSelect() error {
 	f := &finder.GoFuzzyFinder{}
 	idx, err := f.Find(dirs)
 	if err != nil {
-		return err // キャンセルまたはエラー
+		// ESCやCtrl+Cでキャンセルされた場合は正常終了
+		if errors.Is(err, fuzzyfinder.ErrAbort) {
+			return nil
+		}
+		return err
 	}
 
 	targetDir := dirs[idx]
