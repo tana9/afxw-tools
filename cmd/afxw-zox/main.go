@@ -7,9 +7,9 @@ import (
 	"os"
 
 	"github.com/ktr0731/go-fuzzyfinder"
+	"github.com/tana9/afxw-tools/cmd/afxw-zox/zoxide"
 	"github.com/tana9/afxw-tools/internal/afx"
 	"github.com/tana9/afxw-tools/internal/finder"
-	"github.com/tana9/afxw-tools/internal/zoxide"
 	"github.com/urfave/cli/v3"
 )
 

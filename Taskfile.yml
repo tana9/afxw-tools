@@ -3,9 +3,9 @@
 version: '3'
 
 vars:
-  EXENAME: afxw-his.exe
   VERSION:
     sh: git describe --tags --always --dirty || echo dev
+  OUTPUT_DIR: bin
 
 tasks:
   build:
@@ -13,15 +13,19 @@ tasks:
       - task: build-his
       - task: build-bm
       - task: build-zox
+      - task: build-launcher
   build-his:
     cmds:
-      - go build -ldflags="-s -w -X main.version={{.VERSION}}" -o bin/{{.EXENAME}} ./cmd/afxw-his
+      - go build -ldflags="-s -w -X main.version={{.VERSION}}" -o {{.OUTPUT_DIR}}/afxw-his.exe ./cmd/afxw-his
   build-bm:
     cmds:
-      - go build -ldflags="-s -w -X main.version={{.VERSION}}" -o bin/afxw-bm.exe ./cmd/afxw-bm
+      - go build -ldflags="-s -w -X main.version={{.VERSION}}" -o {{.OUTPUT_DIR}}/afxw-bm.exe ./cmd/afxw-bm
   build-zox:
     cmds:
-      - go build -ldflags="-s -w -X main.version={{.VERSION}}" -o bin/afxw-zox.exe ./cmd/afxw-zox
+      - go build -ldflags="-s -w -X main.version={{.VERSION}}" -o {{.OUTPUT_DIR}}/afxw-zox.exe ./cmd/afxw-zox
+  build-launcher:
+    cmds:
+      - go build -ldflags="-s -w -X main.version={{.VERSION}}" -o {{.OUTPUT_DIR}}/afxw-launcher.exe ./cmd/afxw-launcher
   lint:
     cmds:
       - golangci-lint run ./...

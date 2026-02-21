@@ -8,8 +8,8 @@ import (
 	"path/filepath"
 
 	"github.com/ktr0731/go-fuzzyfinder"
+	"github.com/tana9/afxw-tools/cmd/afxw-bm/bookmark"
 	"github.com/tana9/afxw-tools/internal/afx"
-	"github.com/tana9/afxw-tools/internal/bookmark"
 	"github.com/tana9/afxw-tools/internal/finder"
 	"github.com/urfave/cli/v3"
 )

@@ -4,6 +4,55 @@
 
 ## ツール一覧
 
+### afxw-launcher
+あふw用ツールランチャー - メニューから各ツールを選択して実行
+
+**使い方:**
+```bash
+# メニューから選択して実行
+afxw-launcher.exe
+```
+
+**設定ファイル:**
+初回起動時に `~/.config/afxw-launcher/config.toml` が自動作成されます。
+または実行ファイルと同じディレクトリに `config.toml` を配置することもできます。
+
+```toml
+[[menu]]
+name = "フォルダ履歴から選択"
+description = "あふwのフォルダ履歴から選択して移動"
+command = "afxw-his.exe"
+args = []
+
+[[menu]]
+name = "ブックマークから選択"
+description = "ブックマークから選択して移動"
+command = "afxw-bm.exe"
+args = []
+
+[[menu]]
+name = "zoxideから選択"
+description = "zoxideのfrecencyデータベースから選択して移動"
+command = "afxw-zox.exe"
+args = []
+
+[[menu]]
+name = "ブックマークを追加"
+description = "現在のディレクトリをブックマークに追加"
+command = "afxw-bm.exe"
+args = ["-a"]
+
+# カスタムツールの追加例
+[[menu]]
+name = "独自スクリプト"
+description = "カスタムツールを実行"
+command = "my-tool.exe"
+args = []
+
+[settings]
+tool_dir = ""  # ツールの検索パス（省略時は実行ファイルと同じディレクトリ）
+```
+
 ### afxw-his
 あふwのフォルダ履歴から選択して移動するツール
 
@@ -47,6 +96,10 @@ zoxideのfrecency（頻度×最近性）データベースから選択してあ�
 afxw-zox.exe
 ```
 
+## 推奨設定
+
+あふwから `afxw-launcher.exe` を1つのキーで呼び出すように設定すると便利です。
+
 ## ビルド
 
 ```bash
@@ -57,6 +110,7 @@ task build
 task build-his
 task build-bm
 task build-zox
+task build-launcher
 ```
 
 ## テスト
