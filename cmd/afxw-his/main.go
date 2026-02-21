@@ -2,9 +2,11 @@ package main
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"os"
 
+	"github.com/ktr0731/go-fuzzyfinder"
 	"github.com/tana9/afxw-tools/internal/afx"
 	"github.com/tana9/afxw-tools/internal/finder"
 	"github.com/urfave/cli/v3"
@@ -78,6 +80,10 @@ func run(a afx.AFX, f finder.Finder, wins []int) error {
 	// 検索
 	idx, err := f.Find(dirs)
 	if err != nil {
+		// ESCやCtrl+Cでキャンセルされた場合は正常終了
+		if errors.Is(err, fuzzyfinder.ErrAbort) {
+			return nil
+		}
 		return err
 	}
 
