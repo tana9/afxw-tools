@@ -54,7 +54,7 @@ func DefaultConfig() *Config {
 				Name:        "ブックマークを追加",
 				Description: "現在のディレクトリをブックマークに追加",
 				Command:     "afxw-bm.exe",
-				Args:        []string{"-a"},
+				Args:        []string{"-a", ""},
 			},
 		},
 		Settings: Settings{
