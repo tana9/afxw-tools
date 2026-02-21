@@ -63,21 +63,24 @@ func DefaultConfig() *Config {
 	}
 }
 
+// LoadFrom は指定されたパスの設定ファイルを読み込みます。
+func LoadFrom(path string) (*Config, error) {
+	var cfg Config
+	if _, err := toml.DecodeFile(path, &cfg); err != nil {
+		return nil, fmt.Errorf("設定ファイルの読み込みに失敗しました (%s): %w", path, err)
+	}
+	return &cfg, nil
+}
+
 // Load は設定ファイルを読み込みます。
 // 設定ファイルが見つからない場合はデフォルト設定を作成して返します。
 func Load() (*Config, error) {
 	configPath := filepath.Join(os.Getenv("USERPROFILE"), ".config", "afxw-launcher", "config.toml")
 	localPath := filepath.Join(getExecutableDir(), "config.toml")
 
-	paths := []string{configPath, localPath}
-
-	for _, path := range paths {
+	for _, path := range []string{configPath, localPath} {
 		if _, err := os.Stat(path); err == nil {
-			var cfg Config
-			if _, err := toml.DecodeFile(path, &cfg); err != nil {
-				return nil, fmt.Errorf("設定ファイルの読み込みに失敗しました (%s): %w", path, err)
-			}
-			return &cfg, nil
+			return LoadFrom(path)
 		}
 	}
 

@@ -38,8 +38,7 @@ func TestLoad_DefaultWhenNoFile(t *testing.T) {
 	}
 }
 
-func TestLoad_FromFile(t *testing.T) {
-	// 一時ディレクトリにテスト用の設定ファイルを作成
+func TestLoadFrom(t *testing.T) {
 	tmpDir := t.TempDir()
 	configPath := filepath.Join(tmpDir, "config.toml")
 
@@ -58,11 +57,39 @@ tool_dir = "C:\\tools"
 		t.Fatalf("failed to create test config: %v", err)
 	}
 
-	// 簡易的なテスト: デフォルト設定がロードできることを確認
-	// （実際のファイル読み込みテストは統合テストで実施）
-	cfg := DefaultConfig()
-	if len(cfg.Menu) == 0 {
-		t.Error("menu should not be empty")
+	cfg, err := LoadFrom(configPath)
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+
+	if len(cfg.Menu) != 1 {
+		t.Fatalf("expected 1 menu item, got %d", len(cfg.Menu))
+	}
+	if cfg.Menu[0].Name != "Test Command" {
+		t.Errorf("expected name %q, got %q", "Test Command", cfg.Menu[0].Name)
+	}
+	if cfg.Menu[0].Command != "test.exe" {
+		t.Errorf("expected command %q, got %q", "test.exe", cfg.Menu[0].Command)
+	}
+	if len(cfg.Menu[0].Args) != 1 || cfg.Menu[0].Args[0] != "--flag" {
+		t.Errorf("unexpected args: %v", cfg.Menu[0].Args)
+	}
+	if cfg.Settings.ToolDir != `C:\tools` {
+		t.Errorf("expected tool_dir %q, got %q", `C:\tools`, cfg.Settings.ToolDir)
+	}
+}
+
+func TestLoadFrom_InvalidFile(t *testing.T) {
+	tmpDir := t.TempDir()
+	configPath := filepath.Join(tmpDir, "config.toml")
+
+	if err := os.WriteFile(configPath, []byte("invalid toml [[["), 0644); err != nil {
+		t.Fatalf("failed to create test config: %v", err)
+	}
+
+	_, err := LoadFrom(configPath)
+	if err == nil {
+		t.Error("expected error for invalid TOML, got nil")
 	}
 }
 
