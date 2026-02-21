@@ -9,6 +9,7 @@ import (
 	"github.com/ktr0731/go-fuzzyfinder"
 	"github.com/tana9/afxw-tools/internal/afx"
 	"github.com/tana9/afxw-tools/internal/finder"
+	"github.com/tana9/afxw-tools/internal/singleinstance"
 	"github.com/urfave/cli/v3"
 )
 
@@ -28,6 +29,13 @@ func main() {
 			},
 		},
 		Action: func(ctx context.Context, cmd *cli.Command) error {
+			if err := singleinstance.Acquire("afxw-his"); err != nil {
+				if errors.Is(err, singleinstance.ErrAlreadyRunning) {
+					return nil
+				}
+				return err
+			}
+
 			a, err := afx.NewOleAFX()
 			if err != nil {
 				return fmt.Errorf("afxw.objへの接続に失敗しました: %w", err)

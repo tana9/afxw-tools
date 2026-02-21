@@ -2,6 +2,7 @@ package main
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"os"
 	"os/exec"
@@ -9,6 +10,7 @@ import (
 	tea "github.com/charmbracelet/bubbletea"
 	"github.com/charmbracelet/lipgloss"
 	"github.com/tana9/afxw-tools/cmd/afxw-launcher/config"
+	"github.com/tana9/afxw-tools/internal/singleinstance"
 	"github.com/urfave/cli/v3"
 )
 
@@ -127,6 +129,13 @@ func main() {
 
 // run はメインロジックを実行します。
 func run() error {
+	if err := singleinstance.Acquire("afxw-launcher"); err != nil {
+		if errors.Is(err, singleinstance.ErrAlreadyRunning) {
+			return nil
+		}
+		return err
+	}
+
 	// 設定ファイルを読み込み
 	cfg, err := config.Load()
 	if err != nil {

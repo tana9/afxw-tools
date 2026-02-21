@@ -10,6 +10,7 @@ import (
 	"github.com/tana9/afxw-tools/cmd/afxw-zox/zoxide"
 	"github.com/tana9/afxw-tools/internal/afx"
 	"github.com/tana9/afxw-tools/internal/finder"
+	"github.com/tana9/afxw-tools/internal/singleinstance"
 	"github.com/urfave/cli/v3"
 )
 
@@ -34,6 +35,13 @@ func main() {
 }
 
 func run() error {
+	if err := singleinstance.Acquire("afxw-zox"); err != nil {
+		if errors.Is(err, singleinstance.ErrAlreadyRunning) {
+			return nil
+		}
+		return err
+	}
+
 	// あふwに接続（ファジーファインダーの前に接続して、キャンセル時も確実にCloseされるようにする）
 	a, err := afx.NewOleAFX()
 	if err != nil {

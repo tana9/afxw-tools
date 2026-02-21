@@ -11,6 +11,7 @@ import (
 	"github.com/tana9/afxw-tools/cmd/afxw-bm/bookmark"
 	"github.com/tana9/afxw-tools/internal/afx"
 	"github.com/tana9/afxw-tools/internal/finder"
+	"github.com/tana9/afxw-tools/internal/singleinstance"
 	"github.com/urfave/cli/v3"
 )
 
@@ -52,6 +53,13 @@ func main() {
 			}
 
 			// デフォルト動作: ブックマーク選択
+			if err := singleinstance.Acquire("afxw-bm"); err != nil {
+				if errors.Is(err, singleinstance.ErrAlreadyRunning) {
+					return nil
+				}
+				return err
+			}
+
 			bmPath, err := bookmark.GetDefaultPath()
 			if err != nil {
 				return fmt.Errorf("ブックマークファイルのパス取得に失敗しました: %w", err)
