@@ -14,12 +14,3 @@ func (f *GoFuzzyFinder) Find(items []string) (int, error) {
 		return items[i]
 	})
 }
-
-type MockFinder struct {
-	Idx int
-	Err error
-}
-
-func (m *MockFinder) Find(items []string) (int, error) {
-	return m.Idx, m.Err
-}

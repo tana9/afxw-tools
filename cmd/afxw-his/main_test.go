@@ -7,14 +7,13 @@ import (
 
 	"github.com/tana9/afxw-tools/internal/afx"
 	"github.com/tana9/afxw-tools/internal/afxtest"
-	"github.com/tana9/afxw-tools/internal/finder"
 )
 
 func TestRun(t *testing.T) {
 	tests := []struct {
 		name             string
 		afxMock          *afxtest.MockAFX
-		finderMock       *finder.MockFinder
+		finderMock       *afxtest.MockFinder
 		expectErr        bool
 		expectedErr      string
 		expectedExcdPath string
@@ -24,7 +23,7 @@ func TestRun(t *testing.T) {
 			afxMock: &afxtest.MockAFX{
 				HistoriesResult: []string{"C:\\Windows", "C:\\Users"},
 			},
-			finderMock: &finder.MockFinder{
+			finderMock: &afxtest.MockFinder{
 				Idx: 0,
 			},
 			expectedExcdPath: "C:\\Windows",
@@ -34,7 +33,7 @@ func TestRun(t *testing.T) {
 			afxMock: &afxtest.MockAFX{
 				HistoriesResult: []string{"C:\\Windows", "C:\\Users"},
 			},
-			finderMock: &finder.MockFinder{
+			finderMock: &afxtest.MockFinder{
 				Idx: 1,
 			},
 			expectedExcdPath: "C:\\Users",
@@ -44,7 +43,7 @@ func TestRun(t *testing.T) {
 			afxMock: &afxtest.MockAFX{
 				HistoriesResult: []string{"C:\\Windows", "C:\\Users"},
 			},
-			finderMock: &finder.MockFinder{
+			finderMock: &afxtest.MockFinder{
 				Err: errors.New("fuzzyfinder cancelled"),
 			},
 			expectErr:   true,
@@ -55,14 +54,14 @@ func TestRun(t *testing.T) {
 			afxMock: &afxtest.MockAFX{
 				HistoriesResult: []string{},
 			},
-			finderMock: &finder.MockFinder{},
+			finderMock: &afxtest.MockFinder{},
 		},
 		{
 			name: "error from histories",
 			afxMock: &afxtest.MockAFX{
 				HistoriesErr: errors.New("histories error"),
 			},
-			finderMock:  &finder.MockFinder{},
+			finderMock:  &afxtest.MockFinder{},
 			expectErr:   true,
 			expectedErr: "履歴の取得に失敗しました: histories error",
 		},
@@ -72,7 +71,7 @@ func TestRun(t *testing.T) {
 				HistoriesResult: []string{"C:\\Windows"},
 				ExcdErr:         errors.New("excd error"),
 			},
-			finderMock: &finder.MockFinder{
+			finderMock: &afxtest.MockFinder{
 				Idx: 0,
 			},
 			expectErr:   true,
@@ -132,7 +131,7 @@ func TestRun_WinsAffectsHistoryResults(t *testing.T) {
 					afx.WindowRight: {"C:\\Right"},
 				},
 			}
-			finderMock := &finder.MockFinder{Idx: 0}
+			finderMock := &afxtest.MockFinder{Idx: 0}
 
 			err := run(afxMock, finderMock, tt.wins)
 			if err != nil {
@@ -227,7 +226,7 @@ func TestRun_WithDuplicates(t *testing.T) {
 	afxMock := &afxtest.MockAFX{
 		HistoriesResult: []string{"C:\\Windows", "C:\\Users", "C:\\Windows", "C:\\Temp"},
 	}
-	finderMock := &finder.MockFinder{Idx: 1} // "C:\\Users"を選択
+	finderMock := &afxtest.MockFinder{Idx: 1} // "C:\\Users"を選択
 
 	err := run(afxMock, finderMock, []int{afx.WindowLeft, afx.WindowRight})
 	if err != nil {
