@@ -39,15 +39,15 @@ func DefaultConfig() *Config {
 				Args:        []string{},
 			},
 			{
-				Name:        "ブックマークから選択",
-				Description: "ブックマークから選択して移動",
-				Command:     "afxw-bm.exe",
-				Args:        []string{},
-			},
-			{
 				Name:        "zoxideから選択",
 				Description: "zoxideのfrecencyデータベースから選択して移動",
 				Command:     "afxw-zox.exe",
+				Args:        []string{},
+			},
+			{
+				Name:        "ブックマークから選択",
+				Description: "ブックマークから選択して移動",
+				Command:     "afxw-bm.exe",
 				Args:        []string{},
 			},
 			{
