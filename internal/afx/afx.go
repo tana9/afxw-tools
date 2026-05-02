@@ -10,17 +10,18 @@ import (
 )
 
 const (
-	// WindowLeft はあふの左窓を表します。
-	WindowLeft = 0
-	// WindowRight はあふの右窓を表します。
+	WindowLeft  = 0
 	WindowRight = 1
 )
 
-// AFX は afxw.obj と対話するためのインターフェースを提供します。
+// AFX は afxw.obj と対話するためのインターフェースです。
 type AFX interface {
 	Histories(wins []int) ([]string, error)
 	EXCD(path string) error
 	GetActivePath() (string, error)
+	GetCurrentFile() (string, error)
+	// マークなし時はカーソルファイルを返す。パスにスペースを含む場合は正しく動作しない。
+	GetMarkedFiles() ([]string, error)
 	Close()
 }
 
@@ -29,7 +30,6 @@ type oleAFX struct {
 	unknown *ole.IUnknown
 }
 
-// NewOleAFX は実際の afxw.obj と対話する新しい AFX インスタンスを作成します。
 func NewOleAFX() (AFX, error) {
 	runtime.LockOSThread()
 	success := false
@@ -67,7 +67,6 @@ func NewOleAFX() (AFX, error) {
 	return &oleAFX{afxw: afxw, unknown: unknown}, nil
 }
 
-// Histories は指定されたウィンドウの履歴ディレクトリを取得します。
 func (a *oleAFX) Histories(wins []int) ([]string, error) {
 	var dirs []string
 	for _, win := range wins {
@@ -80,7 +79,6 @@ func (a *oleAFX) Histories(wins []int) ([]string, error) {
 	return dirs, nil
 }
 
-// getWindowHistories は指定されたウィンドウの履歴ディレクトリ一覧を取得します。
 func (a *oleAFX) getWindowHistories(win int) ([]string, error) {
 	res, err := oleutil.CallMethod(a.afxw, "HisDirCount", win)
 	if err != nil {
@@ -101,11 +99,8 @@ func (a *oleAFX) getWindowHistories(win int) ([]string, error) {
 	return dirs, nil
 }
 
-// EXCD は指定されたパスにディレクトリを変更します。
 func (a *oleAFX) EXCD(path string) error {
-
 	normalizedPath := ensureTrailingBackslash(path)
-
 	_, err := oleutil.CallMethod(a.afxw, "Exec", fmt.Sprintf("&EXCD -P\"%s\"", normalizedPath))
 	if err != nil {
 		return fmt.Errorf("EXCD呼び出しに失敗しました: %w", err)
@@ -113,19 +108,51 @@ func (a *oleAFX) EXCD(path string) error {
 	return nil
 }
 
-// GetActivePath はアクティブウィンドウのカレントディレクトリを取得します。
 func (a *oleAFX) GetActivePath() (string, error) {
 	// $P はアクティブウィンドウのカレントディレクトリに展開されます
-	res, err := oleutil.CallMethod(a.afxw, "Extract", "$P")
-	if err != nil {
-		return "", fmt.Errorf("アクティブパスの取得に失敗しました: %w", err)
-	}
-	path := fmt.Sprint(res.Value())
-	res.Clear()
-	return path, nil
+	return a.extract("$P")
 }
 
-// Close はCOMリソースを解放し、OSスレッドのロックを解除します。
+func (a *oleAFX) GetCurrentFile() (string, error) {
+	// $P はカレントディレクトリ（末尾に \ あり）、$F はカーソル上のファイル名
+	dir, err := a.extract("$P")
+	if err != nil {
+		return "", err
+	}
+	name, err := a.extract("$F")
+	if err != nil {
+		return "", err
+	}
+	return dir + name, nil
+}
+
+func (a *oleAFX) GetMarkedFiles() ([]string, error) {
+	// $MFP はスペース区切りで返されるため、パスにスペースが含まれる場合は正しく動作しない
+	result, err := a.extract("$MFP")
+	if err != nil {
+		return nil, err
+	}
+	result = strings.TrimSpace(result)
+	if result == "" {
+		f, err := a.GetCurrentFile()
+		if err != nil {
+			return nil, err
+		}
+		return []string{f}, nil
+	}
+	return strings.Fields(result), nil
+}
+
+func (a *oleAFX) extract(variable string) (string, error) {
+	res, err := oleutil.CallMethod(a.afxw, "Extract", variable)
+	if err != nil {
+		return "", fmt.Errorf("変数の展開に失敗しました (%s): %w", variable, err)
+	}
+	value := fmt.Sprint(res.Value())
+	res.Clear()
+	return value, nil
+}
+
 func (a *oleAFX) Close() {
 	defer runtime.UnlockOSThread()
 	defer ole.CoUninitialize()
@@ -138,7 +165,6 @@ func (a *oleAFX) Close() {
 	}
 }
 
-// ensureTrailingBackslash は指定されたパスの末尾にバックスラッシュを追加します（既にある場合は追加しません）。
 func ensureTrailingBackslash(path string) string {
 	if !strings.HasSuffix(path, "\\") {
 		return path + "\\"

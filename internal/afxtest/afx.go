@@ -4,10 +4,14 @@ import "github.com/tana9/afxw-tools/internal/afx"
 
 // MockAFX は afx.AFX インターフェースのテスト用モックです。
 type MockAFX struct {
-	HistoriesResult []string
-	ExcdPath        string
-	HistoriesErr    error
-	ExcdErr         error
+	HistoriesResult    []string
+	ExcdPath           string
+	HistoriesErr       error
+	ExcdErr            error
+	CurrentFileResult  string
+	CurrentFileErr     error
+	MarkedFilesResult  []string
+	MarkedFilesErr     error
 	// HistoriesByWin はウィンドウ番号ごとの履歴を設定します。
 	// 設定されている場合、HistoriesResult より優先されます。
 	HistoriesByWin map[int][]string
@@ -43,6 +47,20 @@ func (m *MockAFX) EXCD(path string) error {
 
 func (m *MockAFX) GetActivePath() (string, error) {
 	return "", nil
+}
+
+func (m *MockAFX) GetCurrentFile() (string, error) {
+	if m.CurrentFileErr != nil {
+		return "", m.CurrentFileErr
+	}
+	return m.CurrentFileResult, nil
+}
+
+func (m *MockAFX) GetMarkedFiles() ([]string, error) {
+	if m.MarkedFilesErr != nil {
+		return nil, m.MarkedFilesErr
+	}
+	return m.MarkedFilesResult, nil
 }
 
 func (m *MockAFX) Close() {}

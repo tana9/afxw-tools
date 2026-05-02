@@ -8,6 +8,7 @@ import (
 
 	tea "github.com/charmbracelet/bubbletea"
 	"github.com/tana9/afxw-tools/cmd/afxw-launcher/config"
+	"github.com/tana9/afxw-tools/internal/cliutil"
 	"github.com/tana9/afxw-tools/internal/singleinstance"
 	"github.com/urfave/cli/v3"
 )
@@ -24,15 +25,9 @@ func main() {
 		},
 	}
 
-	if err := cmd.Run(context.Background(), os.Args); err != nil {
-		fmt.Fprintf(os.Stderr, "エラー: %v\n", err)
-		fmt.Fprintln(os.Stderr, "何かキーを押すと終了します...")
-		fmt.Scanln()
-		os.Exit(1)
-	}
+	cliutil.Run(cmd)
 }
 
-// run はメインロジックを実行します。
 func run() error {
 	if err := singleinstance.Acquire("afxw-launcher"); err != nil {
 		return err
@@ -55,20 +50,24 @@ func run() error {
 
 	final := finalModel.(model)
 	if !final.selected {
-		return nil // キャンセル
+		return nil
 	}
 
 	return executeCommand(cfg, cfg.Menu[final.cursor])
 }
 
-// executeCommand は選択されたコマンドを実行します。
 func executeCommand(cfg *config.Config, item config.MenuItem) error {
 	cmdPath, err := cfg.FindCommand(item.Command)
 	if err != nil {
 		return err
 	}
 
-	cmd := exec.Command(cmdPath, item.Args...)
+	args, err := resolveArgs(item.Args)
+	if err != nil {
+		return err
+	}
+
+	cmd := exec.Command(cmdPath, args...)
 	cmd.Stdin = os.Stdin
 	cmd.Stdout = os.Stdout
 	cmd.Stderr = os.Stderr
