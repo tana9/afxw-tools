@@ -8,23 +8,22 @@ import (
 	"time"
 
 	"github.com/tana9/afxw-tools/internal/afx"
+	"github.com/tana9/afxw-tools/internal/stringutil"
 )
 
-// runImport はあふwの履歴をzoxideデータベースにインポートします。
 func runImport(a afx.AFX) error {
 	dirs, err := a.Histories([]int{afx.WindowLeft, afx.WindowRight})
 	if err != nil {
 		return fmt.Errorf("履歴の取得に失敗しました: %w", err)
 	}
 
-	dirs = removeDuplicates(dirs)
+	dirs = stringutil.RemoveDuplicates(dirs)
 
 	if len(dirs) == 0 {
 		fmt.Println("インポートする履歴がありません。")
 		return nil
 	}
 
-	// z形式の一時ファイルに書き込む
 	tmpFile, err := os.CreateTemp("", "afxw-his-*.txt")
 	if err != nil {
 		return fmt.Errorf("一時ファイルの作成に失敗しました: %w", err)
@@ -37,7 +36,6 @@ func runImport(a afx.AFX) error {
 	}
 	tmpFile.Close()
 
-	// zoxide import --from z --merge <tmpfile>
 	zoxCmd := exec.Command("zoxide", "import", "--from", "z", "--merge", tmpFile.Name())
 	zoxCmd.Stdout = os.Stdout
 	zoxCmd.Stderr = os.Stderr
@@ -49,8 +47,7 @@ func runImport(a afx.AFX) error {
 	return nil
 }
 
-// buildZFormat はパス一覧をz.sh形式の文字列に変換します。
-// 形式: パス|ランク|タイムスタンプ
+// buildZFormat はパス一覧をz.sh形式（パス|ランク|タイムスタンプ）に変換します。
 func buildZFormat(paths []string, timestamp int64) string {
 	var sb strings.Builder
 	for _, p := range paths {

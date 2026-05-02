@@ -31,7 +31,7 @@ func Acquire(name string) error {
 func acquire(name string, timeoutMs uint32) error {
 	h, err := windows.CreateMutex(nil, true, windows.StringToUTF16Ptr("Local\\"+name))
 	if err == nil {
-		// 新規作成成功 - プロセス終了まで保持（意図的なリーク）
+		// 新規作成成功 - ミューテックスをプロセス終了まで保持する（意図的なリーク）
 		_ = h
 		return nil
 	}
@@ -40,7 +40,12 @@ func acquire(name string, timeoutMs uint32) error {
 	}
 
 	// 別インスタンスが起動中 - 終了を待つ
-	event, _ := windows.WaitForSingleObject(h, timeoutMs)
+	// h は既存ミューテックスへのハンドル。取得後もプロセス終了まで保持する（意図的なリーク）
+	event, err := windows.WaitForSingleObject(h, timeoutMs)
+	if err != nil {
+		windows.CloseHandle(h)
+		return fmt.Errorf("ミューテックスの待機に失敗しました: %w", err)
+	}
 	switch event {
 	case waitObject0, waitAbandoned:
 		// 前のインスタンスが終了した - h を保持し続ける
@@ -51,6 +56,6 @@ func acquire(name string, timeoutMs uint32) error {
 		return ErrTimeout
 	default:
 		windows.CloseHandle(h)
-		return fmt.Errorf("ミューテックスの待機に失敗しました")
+		return fmt.Errorf("ミューテックスの待機に失敗しました: 予期しない戻り値 %d", event)
 	}
 }

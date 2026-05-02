@@ -4,12 +4,13 @@ import (
 	"context"
 	"errors"
 	"fmt"
-	"os"
 
 	"github.com/ktr0731/go-fuzzyfinder"
 	"github.com/tana9/afxw-tools/internal/afx"
+	"github.com/tana9/afxw-tools/internal/cliutil"
 	"github.com/tana9/afxw-tools/internal/finder"
 	"github.com/tana9/afxw-tools/internal/singleinstance"
+	"github.com/tana9/afxw-tools/internal/stringutil"
 	"github.com/urfave/cli/v3"
 )
 
@@ -44,17 +45,11 @@ func main() {
 				return err
 			}
 
-			f := &finder.GoFuzzyFinder{}
-			return run(a, f, wins)
+			return run(a, &finder.FuzzyFinder{}, wins)
 		},
 	}
 
-	if err := cmd.Run(context.Background(), os.Args); err != nil {
-		fmt.Fprintf(os.Stderr, "エラー: %v\n", err)
-		fmt.Fprintln(os.Stderr, "何かキーを押すと終了します...")
-		fmt.Scanln()
-		os.Exit(1)
-	}
+	cliutil.Run(cmd)
 }
 
 func parseWindowFlag(window string) ([]int, error) {
@@ -71,49 +66,28 @@ func parseWindowFlag(window string) ([]int, error) {
 }
 
 func run(a afx.AFX, f finder.Finder, wins []int) error {
-	// あふのフォルダ履歴取得
 	dirs, err := a.Histories(wins)
 	if err != nil {
 		return fmt.Errorf("履歴の取得に失敗しました: %w", err)
 	}
 
-	// 重複を除去
-	dirs = removeDuplicates(dirs)
+	dirs = stringutil.RemoveDuplicates(dirs)
 
-	// 候補がなければ何もしない
 	if len(dirs) == 0 {
 		return nil
 	}
 
-	// 検索
 	idx, err := f.Find(dirs)
 	if err != nil {
-		// ESCやCtrl+Cでキャンセルされた場合は正常終了
 		if errors.Is(err, fuzzyfinder.ErrAbort) {
-			return nil
+			return nil // ESC / Ctrl+C でキャンセル
 		}
 		return err
 	}
 
-	// フォルダ変更
 	if err := a.EXCD(dirs[idx]); err != nil {
 		return fmt.Errorf("ディレクトリ移動に失敗しました: %w", err)
 	}
 
 	return nil
-}
-
-// removeDuplicates はスライスから重複を除去します。出現順序を保持します。
-func removeDuplicates(dirs []string) []string {
-	seen := make(map[string]bool)
-	result := make([]string, 0, len(dirs))
-
-	for _, dir := range dirs {
-		if !seen[dir] {
-			seen[dir] = true
-			result = append(result, dir)
-		}
-	}
-
-	return result
 }

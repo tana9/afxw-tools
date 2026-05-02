@@ -13,7 +13,6 @@ func TestDefaultConfig(t *testing.T) {
 		t.Errorf("expected 4 menu items, got %d", len(cfg.Menu))
 	}
 
-	// 最初のメニュー項目を確認
 	if cfg.Menu[0].Name != "フォルダ履歴から選択" {
 		t.Errorf("unexpected first menu name: %s", cfg.Menu[0].Name)
 	}
@@ -24,8 +23,6 @@ func TestDefaultConfig(t *testing.T) {
 }
 
 func TestLoad_ReturnsConfig(t *testing.T) {
-	// Load() がエラーなく設定を返すことを確認
-	// （設定ファイルが存在する場合はそれを、存在しない場合はデフォルトを返す）
 	cfg, err := Load()
 	if err != nil {
 		t.Fatalf("unexpected error: %v", err)
@@ -93,13 +90,11 @@ func TestLoadFrom_InvalidFile(t *testing.T) {
 func TestFindCommand_AbsolutePath(t *testing.T) {
 	cfg := DefaultConfig()
 
-	// 一時ファイルを作成
 	tmpFile := filepath.Join(t.TempDir(), "test.exe")
 	if err := os.WriteFile(tmpFile, []byte{}, 0755); err != nil {
 		t.Fatalf("failed to create test file: %v", err)
 	}
 
-	// 絶対パスで検索
 	found, err := cfg.FindCommand(tmpFile)
 	if err != nil {
 		t.Errorf("unexpected error: %v", err)
@@ -113,7 +108,6 @@ func TestFindCommand_AbsolutePath(t *testing.T) {
 func TestFindCommand_NotFound(t *testing.T) {
 	cfg := DefaultConfig()
 
-	// 存在しないコマンドを検索
 	_, err := cfg.FindCommand("nonexistent-command-12345.exe")
 	if err == nil {
 		t.Error("expected error for nonexistent command")

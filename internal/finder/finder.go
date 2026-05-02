@@ -7,9 +7,9 @@ type Finder interface {
 	Find(items []string) (int, error)
 }
 
-type GoFuzzyFinder struct{}
+type FuzzyFinder struct{}
 
-func (f *GoFuzzyFinder) Find(items []string) (int, error) {
+func (f *FuzzyFinder) Find(items []string) (int, error) {
 	return fuzzyfinder.Find(items, func(i int) string {
 		return items[i]
 	})

@@ -1,17 +1,52 @@
 # afxw-tools
 
-あふw（afxw）用のユーティリティツール集
+あふw（afxw）用のユーティリティツール集です。
 
 ## ツール一覧
 
-### afxw-launcher
-あふw用ツールランチャー - メニューから各ツールを選択して実行
+| ツール | 概要 |
+|--------|------|
+| [afxw-launcher](#afxw-launcher) | ツールランチャー（起点）。メニューから各ツールを呼び出す |
+| [afxw-his](#afxw-his) | あふwのフォルダ履歴から選択して移動 |
+| [afxw-bm](#afxw-bm) | ブックマークを管理し、選択したフォルダに移動 |
+| [afxw-zox](#afxw-zox) | zoxideのデータベースから選択して移動 |
+| [afxw-open](#afxw-open) | カーソル上のファイルをプログラム選択して開く |
 
-**使い方:**
-```bash
-# メニューから選択して実行
+すべてのツールはあふwが起動中の状態で使用します（OLE経由であふwと連携します）。
+
+## セットアップ
+
+### 1. 実行ファイルを配置する
+
+[Releases](../../releases) からダウンロードするか、[自分でビルド](#ビルド)して `.exe` を任意のフォルダに配置します。
+
+### 2. あふwからランチャーを呼び出せるようにする
+
+あふwの設定でキーにランチャーを割り当てます。あふwのマクロ設定（`AFX32.INI` や設定ダイアログ）から外部プログラムとして登録してください。
+
+```
 afxw-launcher.exe
 ```
+
+1つのキーでランチャーが開き、そこから各ツールを選べます。
+
+### 3. 設定ファイルを確認する
+
+各ツールは初回起動時にデフォルト設定ファイルを自動生成します。必要に応じて編集してください。
+
+| ツール | 設定ファイル |
+|--------|-------------|
+| afxw-launcher | `~/.config/afxw-launcher/config.toml` |
+| afxw-open | `~/.config/afxw-open/config.toml` |
+| afxw-bm | 実行ファイルと同じフォルダの `bookmarks.txt` |
+
+---
+
+## ツール
+
+### afxw-launcher
+
+メニューから各ツールを選択して実行するランチャーです。あふwとの連携の起点として使います。
 
 **キー操作:**
 
@@ -23,9 +58,7 @@ afxw-launcher.exe
 | Enter | 選択して実行 |
 | q / Esc / Ctrl+C | 終了 |
 
-**設定ファイル:**
-初回起動時に `~/.config/afxw-launcher/config.toml` が自動作成されます。
-または実行ファイルと同じディレクトリに `config.toml` を配置することもできます。
+**設定ファイル:** `~/.config/afxw-launcher/config.toml`（実行ファイルと同フォルダの `config.toml` も可）
 
 ```toml
 [[menu]]
@@ -52,36 +85,50 @@ description = "現在のディレクトリをブックマークに追加"
 command = "afxw-bm.exe"
 args = ["-a", ""]
 
-# カスタムツールの追加例
 [[menu]]
-name = "独自スクリプト"
-description = "カスタムツールを実行"
-command = "my-tool.exe"
-args = []
+name = "ファイルを開く"
+description = "選択ファイルをプログラム選択して開く"
+command = "afxw-open.exe"
+args = ["{files}"]
 
 [settings]
 tool_dir = ""  # ツールの検索パス（省略時は実行ファイルと同じディレクトリ）
 ```
 
-### afxw-his
-あふwのフォルダ履歴から選択して移動するツール
+**引数のプレースホルダー:**
 
-**使い方:**
+`args` にはあふwの状態を参照するプレースホルダーを使えます。
+
+| プレースホルダー | 展開内容 |
+|-----------------|---------|
+| `{file}` | アクティブウィンドウのカーソル位置のファイルのフルパス |
+| `{files}` | マーク済みファイルのフルパス一覧（マークなしの場合はカーソルファイル）。1引数が複数引数に展開される |
+
+> **注意:** `{files}` はスペース区切りで取得するため、パスにスペースが含まれる場合は正しく動作しないことがあります。
+
+---
+
+### afxw-his
+
+あふwのフォルダ履歴をfuzzyfinderで絞り込み、選択したフォルダに移動します。
+
 ```bash
-# 両方のウィンドウの履歴から選択
+# 両ウィンドウの履歴から選択して移動
 afxw-his.exe
 
-# 左窓の履歴のみから選択
+# 左窓の履歴のみ
 afxw-his.exe --window left
 
-# 右窓の履歴のみから選択
+# 右窓の履歴のみ
 afxw-his.exe --window right
 ```
 
-### afxw-bm
-ブックマーク管理ツール
+---
 
-**使い方:**
+### afxw-bm
+
+フォルダのブックマークを管理します。ブックマークをfuzzyfinderで絞り込み、選択したフォルダに移動します。
+
 ```bash
 # ブックマークから選択して移動
 afxw-bm.exe
@@ -90,41 +137,79 @@ afxw-bm.exe
 afxw-bm.exe -a
 
 # 指定したパスをブックマークに追加
-afxw-bm.exe -a C:\path\to\directory
+afxw-bm.exe -a "C:\path\to\directory"
 ```
 
+ブックマークは実行ファイルと同じフォルダの `bookmarks.txt` に1行1フォルダで保存されます。
+
+---
+
 ### afxw-zox
-zoxideのfrecency（頻度×最近性）データベースから選択してあふwで移動するツール
 
-**前提条件:**
-- [zoxide](https://github.com/ajeetdsouza/zoxide)がインストールされていること
-- ターミナルでzoxideを使用してディレクトリデータベースが構築されていること
+[zoxide](https://github.com/ajeetdsouza/zoxide) のfrecency（頻度×最近性）データベースから選択してあふwで移動します。ターミナルでよく使うフォルダにすばやくジャンプできます。
 
-**使い方:**
+**前提:** zoxideがインストールされ、データベースが構築されていること。
+
 ```bash
 # zoxideのデータベースから選択して移動
 afxw-zox.exe
 
-# あふwの履歴をzoxideデータベースにインポート
-afxw-zox.exe -i
+# あふwの履歴をzoxideデータベースにインポート（初回推奨）
 afxw-zox.exe --import-history
 ```
 
-## 推奨設定
+---
 
-あふwから `afxw-launcher.exe` を1つのキーで呼び出すように設定すると便利です。
+### afxw-open
+
+あふwで選択したファイルをfuzzyfinderでプログラムを選んで開きます。プログラムは非同期で起動し、ツール自体はすぐに終了します。
+
+```bash
+# カーソル上のファイルを開く（あふwのマクロから: $F = カーソルファイルのフルパス）
+afxw-open.exe "$F"
+
+# マーク済みファイルをまとめて開く（$MFP = マーク済みファイルのフルパス一覧）
+afxw-open.exe $MFP
+```
+
+afxw-launcherから呼び出す場合は `args = ["{files}"]` を設定します（[上記参照](#afxw-launcher)）。
+
+**設定ファイル:** `~/.config/afxw-open/config.toml`（実行ファイルと同フォルダの `afxw-open.toml` も可）
+
+```toml
+[[program]]
+name = "VSCode"
+description = "Visual Studio Codeで開く"
+command = "code.exe"
+args = []
+
+[[program]]
+name = "サクラエディタ"
+description = "サクラエディタで開く"
+command = "sakura.exe"
+args = []
+
+[[program]]
+name = "7-Zip (解凍)"
+description = "カレントディレクトリに解凍"
+command = "7z.exe"
+args = ["x", "-y"]
+```
+
+---
 
 ## ビルド
 
 ```bash
-# すべてのツールをビルド
+# すべてのツールをビルド（bin/ に出力）
 task build
 
 # 個別にビルド
+task build-launcher
 task build-his
 task build-bm
 task build-zox
-task build-launcher
+task build-open
 ```
 
 ## テスト

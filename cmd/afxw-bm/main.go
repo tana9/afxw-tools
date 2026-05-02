@@ -4,12 +4,12 @@ import (
 	"context"
 	"errors"
 	"fmt"
-	"os"
 	"path/filepath"
 
 	"github.com/ktr0731/go-fuzzyfinder"
 	"github.com/tana9/afxw-tools/cmd/afxw-bm/bookmark"
 	"github.com/tana9/afxw-tools/internal/afx"
+	"github.com/tana9/afxw-tools/internal/cliutil"
 	"github.com/tana9/afxw-tools/internal/finder"
 	"github.com/tana9/afxw-tools/internal/singleinstance"
 	"github.com/urfave/cli/v3"
@@ -31,11 +31,9 @@ func main() {
 			},
 		},
 		Action: func(ctx context.Context, cmd *cli.Command) error {
-			// -a フラグが指定されている場合
 			if cmd.IsSet("add") {
 				target := cmd.String("add")
 
-				// パスが指定されていない場合、あふwから取得を試みる
 				if target == "" || target == "." {
 					if a, err := afx.NewOleAFX(); err == nil {
 						defer a.Close()
@@ -43,7 +41,7 @@ func main() {
 							target = path
 						}
 					}
-					// まだ空の場合（例：あふwが起動していない）、カレントディレクトリを使用
+					// あふwが起動していない場合はカレントディレクトリを使用
 					if target == "" {
 						target = "."
 					}
@@ -52,7 +50,6 @@ func main() {
 				return addBookmark(target)
 			}
 
-			// デフォルト動作: ブックマーク選択
 			if err := singleinstance.Acquire("afxw-bm"); err != nil {
 				return err
 			}
@@ -68,16 +65,11 @@ func main() {
 			}
 			defer a.Close()
 
-			return runSelect(a, &finder.GoFuzzyFinder{}, bmPath)
+			return runSelect(a, &finder.FuzzyFinder{}, bmPath)
 		},
 	}
 
-	if err := cmd.Run(context.Background(), os.Args); err != nil {
-		fmt.Fprintf(os.Stderr, "エラー: %v\n", err)
-		fmt.Fprintln(os.Stderr, "何かキーを押すと終了します...")
-		fmt.Scanln()
-		os.Exit(1)
-	}
+	cliutil.Run(cmd)
 }
 
 func addBookmark(path string) error {
@@ -112,9 +104,8 @@ func runSelect(a afx.AFX, f finder.Finder, bmPath string) error {
 
 	idx, err := f.Find(dirs)
 	if err != nil {
-		// ESCやCtrl+Cでキャンセルされた場合は正常終了
 		if errors.Is(err, fuzzyfinder.ErrAbort) {
-			return nil
+			return nil // ESC / Ctrl+C でキャンセル
 		}
 		return err
 	}

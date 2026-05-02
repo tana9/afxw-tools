@@ -1,29 +1,27 @@
 package zoxide
 
 import (
-	"bufio"
+	"errors"
 	"fmt"
 	"os"
 	"os/exec"
 	"strconv"
 	"strings"
+	"sync"
 )
 
-// Entry はzoxideのディレクトリエントリを表します。
 type Entry struct {
-	Path  string  // ディレクトリパス
-	Score float64 // frecencyスコア
+	Path  string
+	Score float64
 }
 
-// Query はzoxideのクエリコマンドを実行してディレクトリリストを取得します。
-// スコアの高い順（降順）でソートされたエントリを返します。
+// Query はzoxideのクエリを実行してスコア降順のエントリを返します。
 func Query() ([]Entry, error) {
-	// zoxide query --list --score を実行
 	cmd := exec.Command("zoxide", "query", "--list", "--score")
 	output, err := cmd.Output()
 	if err != nil {
-		// zoxideがインストールされていない、またはデータベースが空の場合
-		if exitErr, ok := err.(*exec.ExitError); ok {
+		var exitErr *exec.ExitError
+		if errors.As(err, &exitErr) {
 			return nil, fmt.Errorf("zoxideコマンドの実行に失敗しました: %s", string(exitErr.Stderr))
 		}
 		return nil, fmt.Errorf("zoxideコマンドの実行に失敗しました: %w", err)
@@ -32,48 +30,46 @@ func Query() ([]Entry, error) {
 	return parseQueryOutput(string(output))
 }
 
-// parseQueryOutput はzoxide query --list --scoreの出力をパースします。
-// 出力形式: "スコア パス" (例: "12.5 C:\Users\TanakaTakashi\Projects")
+// parseQueryOutput はzoxide query --list --scoreの出力（"スコア パス"形式）をパースします。
 func parseQueryOutput(output string) ([]Entry, error) {
-	var entries []Entry
-	scanner := bufio.NewScanner(strings.NewReader(output))
-
-	for scanner.Scan() {
-		line := strings.TrimSpace(scanner.Text())
+	var raw []Entry
+	for line := range strings.SplitSeq(output, "\n") {
+		line = strings.TrimSpace(line)
 		if line == "" {
 			continue
 		}
-
-		// スコアとパスを分割（最初のスペースで分割）
 		parts := strings.SplitN(line, " ", 2)
 		if len(parts) != 2 {
-			continue // 不正な行はスキップ
+			continue
 		}
-
 		score, err := strconv.ParseFloat(parts[0], 64)
 		if err != nil {
-			continue // スコアのパースに失敗した行はスキップ
+			continue
 		}
-
-		path := parts[1]
-
-		// パスが実際に存在するか確認
-		if _, err := os.Stat(path); err == nil {
-			entries = append(entries, Entry{
-				Path:  path,
-				Score: score,
-			})
-		}
+		raw = append(raw, Entry{Path: parts[1], Score: score})
 	}
 
-	if err := scanner.Err(); err != nil {
-		return nil, fmt.Errorf("出力のパースに失敗しました: %w", err)
+	exists := make([]bool, len(raw))
+	var wg sync.WaitGroup
+	for i, e := range raw {
+		wg.Add(1)
+		go func(idx int, path string) {
+			defer wg.Done()
+			_, err := os.Stat(path)
+			exists[idx] = err == nil
+		}(i, e.Path)
 	}
+	wg.Wait()
 
+	entries := make([]Entry, 0, len(raw))
+	for i, e := range raw {
+		if exists[i] {
+			entries = append(entries, e)
+		}
+	}
 	return entries, nil
 }
 
-// Paths はエントリからパスのみを抽出して返します。
 func Paths(entries []Entry) []string {
 	paths := make([]string, len(entries))
 	for i, entry := range entries {

@@ -2,13 +2,13 @@ package main
 
 import (
 	"fmt"
+	"strings"
 
 	tea "github.com/charmbracelet/bubbletea"
 	"github.com/charmbracelet/lipgloss"
 	"github.com/tana9/afxw-tools/cmd/afxw-launcher/config"
 )
 
-// スタイル定義
 var (
 	titleStyle = lipgloss.NewStyle().
 			Bold(true).
@@ -32,7 +32,6 @@ var (
 			MarginTop(1)
 )
 
-// model はアプリケーションの状態を保持します。
 type model struct {
 	cfg      *config.Config
 	cursor   int
@@ -40,12 +39,10 @@ type model struct {
 	quitting bool
 }
 
-// Init は初期化時に実行されるコマンドを返します。
 func (m model) Init() tea.Cmd {
 	return nil
 }
 
-// Update はメッセージに応じて状態を更新します。
 func (m model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	switch msg := msg.(type) {
 	case tea.KeyMsg:
@@ -81,30 +78,30 @@ func (m model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	return m, nil
 }
 
-// View は画面に表示する内容を返します。
 func (m model) View() string {
 	if m.quitting && !m.selected {
 		return ""
 	}
 
-	s := titleStyle.Render("=== あふw ツールランチャー ===")
-	s += "\n\n"
+	var sb strings.Builder
+	sb.WriteString(titleStyle.Render("=== あふw ツールランチャー ==="))
+	sb.WriteString("\n\n")
 
 	for i, item := range m.cfg.Menu {
 		cursor := " "
 		if m.cursor == i {
 			cursor = ">"
-			s += selectedStyle.Render(fmt.Sprintf("%s %d. %s", cursor, i+1, item.Name))
+			sb.WriteString(selectedStyle.Render(fmt.Sprintf("%s %d. %s", cursor, i+1, item.Name)))
 		} else {
-			s += normalStyle.Render(fmt.Sprintf("%s %d. %s", cursor, i+1, item.Name))
+			sb.WriteString(normalStyle.Render(fmt.Sprintf("%s %d. %s", cursor, i+1, item.Name)))
 		}
-		s += "\n"
-		s += descStyle.Render(item.Description)
-		s += "\n"
+		sb.WriteString("\n")
+		sb.WriteString(descStyle.Render(item.Description))
+		sb.WriteString("\n")
 	}
 
-	s += "\n"
-	s += helpStyle.Render("↑/k: 上, ↓/j: 下, Enter: 実行, 1-9: 番号で選択, q/Esc: 終了")
+	sb.WriteString("\n")
+	sb.WriteString(helpStyle.Render("↑/k: 上, ↓/j: 下, Enter: 実行, 1-9: 番号で選択, q/Esc: 終了"))
 
-	return s
+	return sb.String()
 }

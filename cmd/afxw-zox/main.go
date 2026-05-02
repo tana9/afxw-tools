@@ -4,11 +4,11 @@ import (
 	"context"
 	"errors"
 	"fmt"
-	"os"
 
 	"github.com/ktr0731/go-fuzzyfinder"
 	"github.com/tana9/afxw-tools/cmd/afxw-zox/zoxide"
 	"github.com/tana9/afxw-tools/internal/afx"
+	"github.com/tana9/afxw-tools/internal/cliutil"
 	"github.com/tana9/afxw-tools/internal/finder"
 	"github.com/tana9/afxw-tools/internal/singleinstance"
 	"github.com/urfave/cli/v3"
@@ -43,16 +43,11 @@ func main() {
 				return err
 			}
 
-			return run(a, &finder.GoFuzzyFinder{}, zoxide.Query)
+			return run(a, &finder.FuzzyFinder{}, zoxide.Query)
 		},
 	}
 
-	if err := cmd.Run(context.Background(), os.Args); err != nil {
-		fmt.Fprintf(os.Stderr, "エラー: %v\n", err)
-		fmt.Fprintln(os.Stderr, "何かキーを押すと終了します...")
-		fmt.Scanln()
-		os.Exit(1)
-	}
+	cliutil.Run(cmd)
 }
 
 func run(a afx.AFX, f finder.Finder, query func() ([]zoxide.Entry, error)) error {
@@ -82,17 +77,4 @@ func run(a afx.AFX, f finder.Finder, query func() ([]zoxide.Entry, error)) error
 	}
 
 	return nil
-}
-
-// removeDuplicates はスライスから重複を除去します。出現順序を保持します。
-func removeDuplicates(dirs []string) []string {
-	seen := make(map[string]bool)
-	result := make([]string, 0, len(dirs))
-	for _, dir := range dirs {
-		if !seen[dir] {
-			seen[dir] = true
-			result = append(result, dir)
-		}
-	}
-	return result
 }

@@ -1,15 +1,15 @@
 package bookmark
 
 import (
-	"bufio"
+	"errors"
 	"fmt"
 	"os"
 	"path/filepath"
 	"strings"
+
+	"github.com/tana9/afxw-tools/internal/stringutil"
 )
 
-// GetDefaultPath はブックマークファイルのデフォルトパスを返します。
-// 実行ファイルと同じディレクトリにある "bookmarks.txt" のパスを返します。
 func GetDefaultPath() (string, error) {
 	exe, err := os.Executable()
 	if err != nil {
@@ -18,40 +18,24 @@ func GetDefaultPath() (string, error) {
 	return filepath.Join(filepath.Dir(exe), "bookmarks.txt"), nil
 }
 
-// Load は指定されたファイルからブックマークを読み込みます。
-// 重複のない文字列のスライスを返します。
 func Load(path string) ([]string, error) {
-	f, err := os.Open(path)
-	if os.IsNotExist(err) {
+	data, err := os.ReadFile(path)
+	if errors.Is(err, os.ErrNotExist) {
 		return []string{}, nil
 	}
 	if err != nil {
-		return nil, fmt.Errorf("ブックマークファイルのオープンに失敗しました: %w", err)
+		return nil, fmt.Errorf("ブックマークファイルの読み込みに失敗しました: %w", err)
 	}
-	defer f.Close()
 
 	var lines []string
-	seen := make(map[string]struct{})
-	scanner := bufio.NewScanner(f)
-	for scanner.Scan() {
-		line := strings.TrimSpace(scanner.Text())
-		if line == "" {
-			continue
-		}
-		if _, ok := seen[line]; !ok {
+	for line := range strings.SplitSeq(string(data), "\n") {
+		if line = strings.TrimSpace(line); line != "" {
 			lines = append(lines, line)
-			seen[line] = struct{}{}
 		}
 	}
-
-	if err := scanner.Err(); err != nil {
-		return nil, fmt.Errorf("ブックマークファイルのスキャンに失敗しました: %w", err)
-	}
-	return lines, nil
+	return stringutil.RemoveDuplicates(lines), nil
 }
 
-// Add は新しいブックマークをファイルに追記します。
-// 重複するブックマークは追加しません。
 func Add(path string, newItem string) error {
 	// Windowsでの一貫性のため、パス区切り文字をバックスラッシュに正規化します
 	newItem = filepath.Clean(newItem)
@@ -62,8 +46,8 @@ func Add(path string, newItem string) error {
 	}
 
 	for _, line := range lines {
-		if strings.EqualFold(line, newItem) { // Windowsパスの大文字小文字を区別しない比較
-			return nil // 既に存在する場合は何もしない
+		if strings.EqualFold(line, newItem) { // Windowsパスは大文字小文字を区別しない
+			return nil
 		}
 	}
 
