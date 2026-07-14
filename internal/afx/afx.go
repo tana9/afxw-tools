@@ -132,9 +132,13 @@ func (a *oleAFX) GetMarkedFiles() ([]string, error) {
 	if err != nil {
 		return nil, err
 	}
+	return parseMarkedFiles(result, a.GetCurrentFile)
+}
+
+func parseMarkedFiles(result string, getCurrentFile func() (string, error)) ([]string, error) {
 	result = strings.TrimSpace(result)
 	if result == "" {
-		f, err := a.GetCurrentFile()
+		f, err := getCurrentFile()
 		if err != nil {
 			return nil, err
 		}

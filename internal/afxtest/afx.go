@@ -4,14 +4,14 @@ import "github.com/tana9/afxw-tools/internal/afx"
 
 // MockAFX は afx.AFX インターフェースのテスト用モックです。
 type MockAFX struct {
-	HistoriesResult    []string
-	ExcdPath           string
-	HistoriesErr       error
-	ExcdErr            error
-	CurrentFileResult  string
-	CurrentFileErr     error
-	MarkedFilesResult  []string
-	MarkedFilesErr     error
+	HistoriesResult   []string
+	ExcdPath          string
+	HistoriesErr      error
+	ExcdErr           error
+	CurrentFileResult string
+	CurrentFileErr    error
+	MarkedFilesResult []string
+	MarkedFilesErr    error
 	// HistoriesByWin はウィンドウ番号ごとの履歴を設定します。
 	// 設定されている場合、HistoriesResult より優先されます。
 	HistoriesByWin map[int][]string

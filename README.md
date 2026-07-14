@@ -60,6 +60,8 @@ afxw-launcher.exe
 
 **設定ファイル:** `~/.config/afxw-launcher/config.toml`（実行ファイルと同フォルダの `config.toml` も可）
 
+ユーザー設定ファイルには、更新後の初回起動時に不足している標準の「ファイルを開く」メニューが自動追加されます。
+
 ```toml
 [[menu]]
 name = "フォルダ履歴から選択"

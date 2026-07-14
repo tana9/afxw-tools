@@ -44,6 +44,10 @@ func run(files []string) error {
 		return fmt.Errorf("設定の読み込みに失敗しました: %w", err)
 	}
 
+	return runWithConfig(files, cfg, selectProgram, openFiles)
+}
+
+func runWithConfig(files []string, cfg *config.Config, selectProgram func([]config.Program) (int, error), openFiles func(config.Program, []string) error) error {
 	if len(cfg.Programs) == 0 {
 		return fmt.Errorf("プログラムが設定されていません")
 	}
@@ -73,7 +77,11 @@ func selectProgram(programs []config.Program) (int, error) {
 // openFiles は指定されたプログラムでファイルを開きます。
 // プログラムは非同期で起動し、ツール自体はすぐに終了します。
 func openFiles(p config.Program, files []string) error {
-	cmdPath, err := config.FindCommand(p.Command)
+	return openFilesWith(p, files, config.FindCommand, startCommand)
+}
+
+func openFilesWith(p config.Program, files []string, findCommand func(string) (string, error), startCommand func(string, []string) error) error {
+	cmdPath, err := findCommand(p.Command)
 	if err != nil {
 		return err
 	}
@@ -82,10 +90,13 @@ func openFiles(p config.Program, files []string) error {
 	args = append(args, p.Args...)
 	args = append(args, files...)
 
-	cmd := exec.Command(cmdPath, args...)
-	if err := cmd.Start(); err != nil {
+	if err := startCommand(cmdPath, args); err != nil {
 		return fmt.Errorf("プログラムの起動に失敗しました (%s): %w", p.Command, err)
 	}
 
 	return nil
+}
+
+func startCommand(path string, args []string) error {
+	return exec.Command(path, args...).Start()
 }

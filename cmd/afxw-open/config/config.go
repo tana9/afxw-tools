@@ -1,6 +1,7 @@
 package config
 
 import (
+	"errors"
 	"fmt"
 	"os"
 	"path/filepath"
@@ -38,14 +39,26 @@ func LoadFrom(path string) (*Config, error) {
 }
 
 func Load() (*Config, error) {
-	home, _ := os.UserHomeDir()
+	home, err := os.UserHomeDir()
+	if err != nil {
+		return nil, fmt.Errorf("ホームディレクトリの取得に失敗しました: %w", err)
+	}
 	configPath := filepath.Join(home, ".config", "afxw-open", "config.toml")
 	localPath := filepath.Join(cmdutil.ExecDir(), "afxw-open.toml")
+	return load(configPath, localPath)
+}
 
-	for _, path := range []string{configPath, localPath} {
-		if _, err := os.Stat(path); err == nil {
-			return LoadFrom(path)
-		}
+func load(configPath, localPath string) (*Config, error) {
+	if _, err := os.Stat(configPath); err == nil {
+		return LoadFrom(configPath)
+	} else if !errors.Is(err, os.ErrNotExist) {
+		return nil, fmt.Errorf("設定ファイルの確認に失敗しました (%s): %w", configPath, err)
+	}
+
+	if _, err := os.Stat(localPath); err == nil {
+		return LoadFrom(localPath)
+	} else if !errors.Is(err, os.ErrNotExist) {
+		return nil, fmt.Errorf("設定ファイルの確認に失敗しました (%s): %w", localPath, err)
 	}
 
 	cfg := DefaultConfig()

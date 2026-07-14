@@ -57,7 +57,11 @@ func run() error {
 }
 
 func executeCommand(cfg *config.Config, item config.MenuItem) error {
-	cmdPath, err := cfg.FindCommand(item.Command)
+	return executeCommandWith(item, cfg.FindCommand, resolveArgs, runCommand)
+}
+
+func executeCommandWith(item config.MenuItem, findCommand func(string) (string, error), resolveArgs func([]string) ([]string, error), runCommand func(string, []string) error) error {
+	cmdPath, err := findCommand(item.Command)
 	if err != nil {
 		return err
 	}
@@ -67,14 +71,18 @@ func executeCommand(cfg *config.Config, item config.MenuItem) error {
 		return err
 	}
 
-	cmd := exec.Command(cmdPath, args...)
-	cmd.Stdin = os.Stdin
-	cmd.Stdout = os.Stdout
-	cmd.Stderr = os.Stderr
-
-	if err := cmd.Run(); err != nil {
+	if err := runCommand(cmdPath, args); err != nil {
 		return fmt.Errorf("コマンドの実行に失敗しました: %w", err)
 	}
 
 	return nil
+}
+
+func runCommand(path string, args []string) error {
+	cmd := exec.Command(path, args...)
+	cmd.Stdin = os.Stdin
+	cmd.Stdout = os.Stdout
+	cmd.Stderr = os.Stderr
+
+	return cmd.Run()
 }

@@ -6,6 +6,18 @@ before:
     - go mod tidy
 
 builds:
+  - id: afxw-launcher
+    main: ./cmd/afxw-launcher
+    binary: afxw-launcher
+    env:
+      - CGO_ENABLED=0
+    goos:
+      - windows
+    goarch:
+      - amd64
+    ldflags:
+      - -s -w -X main.version={{.Version}}
+
   - id: afxw-his
     main: ./cmd/afxw-his
     binary: afxw-his

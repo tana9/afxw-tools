@@ -17,7 +17,8 @@ func resolveArgs(args []string) ([]string, error) {
 	for _, arg := range args {
 		if strings.Contains(arg, "{files}") {
 			hasFiles = true
-		} else if strings.Contains(arg, "{file}") {
+		}
+		if strings.Contains(arg, "{file}") {
 			hasFile = true
 		}
 	}
@@ -58,7 +59,8 @@ func expandArgs(args []string, currentFile string, markedFiles []string) []strin
 				resolved = append(resolved, markedFiles...)
 			} else {
 				for _, f := range markedFiles {
-					resolved = append(resolved, strings.ReplaceAll(arg, "{files}", f))
+					expanded := strings.ReplaceAll(arg, "{files}", f)
+					resolved = append(resolved, strings.ReplaceAll(expanded, "{file}", currentFile))
 				}
 			}
 		} else {

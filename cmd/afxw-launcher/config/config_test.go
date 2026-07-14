@@ -3,14 +3,15 @@ package config
 import (
 	"os"
 	"path/filepath"
+	"strings"
 	"testing"
 )
 
 func TestDefaultConfig(t *testing.T) {
 	cfg := DefaultConfig()
 
-	if len(cfg.Menu) != 4 {
-		t.Errorf("expected 4 menu items, got %d", len(cfg.Menu))
+	if len(cfg.Menu) != 5 {
+		t.Errorf("expected 5 menu items, got %d", len(cfg.Menu))
 	}
 
 	if cfg.Menu[0].Name != "フォルダ履歴から選択" {
@@ -20,15 +21,92 @@ func TestDefaultConfig(t *testing.T) {
 	if cfg.Menu[0].Command != "afxw-his.exe" {
 		t.Errorf("unexpected first menu command: %s", cfg.Menu[0].Command)
 	}
+
+	open := cfg.Menu[4]
+	if open.Command != "afxw-open.exe" {
+		t.Errorf("unexpected open command: %s", open.Command)
+	}
+	if len(open.Args) != 1 || open.Args[0] != "{files}" {
+		t.Errorf("unexpected open args: %v", open.Args)
+	}
 }
 
-func TestLoad_ReturnsConfig(t *testing.T) {
-	cfg, err := Load()
+func TestLoad_CreatesDefaultConfig(t *testing.T) {
+	configPath := filepath.Join(t.TempDir(), "config.toml")
+	localPath := filepath.Join(t.TempDir(), "local-config.toml")
+
+	cfg, err := load(configPath, localPath)
 	if err != nil {
 		t.Fatalf("unexpected error: %v", err)
 	}
-	if len(cfg.Menu) == 0 {
-		t.Error("expected non-empty menu")
+	if len(cfg.Menu) != 5 {
+		t.Errorf("expected 5 menu items, got %d", len(cfg.Menu))
+	}
+	if _, err := os.Stat(configPath); err != nil {
+		t.Errorf("expected default config to be created: %v", err)
+	}
+}
+
+func TestLoad_MigratesExistingUserConfig(t *testing.T) {
+	configPath := filepath.Join(t.TempDir(), "config.toml")
+	localPath := filepath.Join(t.TempDir(), "local-config.toml")
+	legacyConfig := `
+# このコメントは保持する
+[[menu]]
+name = "履歴"
+command = "afxw-his.exe"
+args = []
+`
+	if err := os.WriteFile(configPath, []byte(legacyConfig), 0644); err != nil {
+		t.Fatal(err)
+	}
+
+	cfg, err := load(configPath, localPath)
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+	if len(cfg.Menu) != 2 {
+		t.Fatalf("expected 2 menu items, got %d", len(cfg.Menu))
+	}
+	if cfg.Menu[1].Command != "afxw-open.exe" {
+		t.Errorf("expected open command, got %q", cfg.Menu[1].Command)
+	}
+
+	persisted, err := LoadFrom(configPath)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(persisted.Menu) != 2 {
+		t.Errorf("expected migrated config to be persisted, got %d items", len(persisted.Menu))
+	}
+	content, err := os.ReadFile(configPath)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if !strings.Contains(string(content), "# このコメントは保持する") {
+		t.Error("expected existing comments to be preserved")
+	}
+}
+
+func TestLoad_PreservesLocalConfig(t *testing.T) {
+	configPath := filepath.Join(t.TempDir(), "config.toml")
+	localPath := filepath.Join(t.TempDir(), "local-config.toml")
+	localConfig := `
+[[menu]]
+name = "独自コマンド"
+command = "custom.exe"
+args = []
+`
+	if err := os.WriteFile(localPath, []byte(localConfig), 0644); err != nil {
+		t.Fatal(err)
+	}
+
+	cfg, err := load(configPath, localPath)
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+	if len(cfg.Menu) != 1 || cfg.Menu[0].Command != "custom.exe" {
+		t.Errorf("unexpected local config: %+v", cfg.Menu)
 	}
 }
 

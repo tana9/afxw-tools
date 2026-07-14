@@ -56,7 +56,7 @@ func TestParseQueryOutput_PathWithSpaces(t *testing.T) {
 	}
 }
 
-func TestParseQueryOutput_NonExistentPathFiltered(t *testing.T) {
+func TestParseQueryOutput_PreservesNonExistentPaths(t *testing.T) {
 	dirs := makeTestDirs(t, "exists")
 	nonExistent := filepath.Join(t.TempDir(), "no_such_dir")
 	input := fmt.Sprintf("20.0 %s\n5.0 %s\n", dirs[0], nonExistent)
@@ -65,11 +65,14 @@ func TestParseQueryOutput_NonExistentPathFiltered(t *testing.T) {
 	if err != nil {
 		t.Fatalf("unexpected error: %v", err)
 	}
-	if len(got) != 1 {
-		t.Fatalf("expected 1 entry (non-existent filtered), got %d", len(got))
+	if len(got) != 2 {
+		t.Fatalf("expected 2 entries, got %d", len(got))
 	}
 	if got[0].Path != dirs[0] {
 		t.Errorf("expected %q, got %q", dirs[0], got[0].Path)
+	}
+	if got[1].Path != nonExistent {
+		t.Errorf("expected %q, got %q", nonExistent, got[1].Path)
 	}
 }
 

@@ -3,11 +3,9 @@ package zoxide
 import (
 	"errors"
 	"fmt"
-	"os"
 	"os/exec"
 	"strconv"
 	"strings"
-	"sync"
 )
 
 type Entry struct {
@@ -49,25 +47,8 @@ func parseQueryOutput(output string) ([]Entry, error) {
 		raw = append(raw, Entry{Path: parts[1], Score: score})
 	}
 
-	exists := make([]bool, len(raw))
-	var wg sync.WaitGroup
-	for i, e := range raw {
-		wg.Add(1)
-		go func(idx int, path string) {
-			defer wg.Done()
-			_, err := os.Stat(path)
-			exists[idx] = err == nil
-		}(i, e.Path)
-	}
-	wg.Wait()
-
-	entries := make([]Entry, 0, len(raw))
-	for i, e := range raw {
-		if exists[i] {
-			entries = append(entries, e)
-		}
-	}
-	return entries, nil
+	// zoxide は --all が指定されない限り利用不能なディレクトリを出力しない。
+	return raw, nil
 }
 
 func Paths(entries []Entry) []string {

@@ -48,6 +48,15 @@ func TestExpandArgs_FilesEmbedded_ExpandsPerFile(t *testing.T) {
 	}
 }
 
+func TestExpandArgs_FileAndFilesInSameArgument(t *testing.T) {
+	marked := []string{`C:\a.txt`, `C:\b.txt`}
+	got := expandArgs([]string{"--pair={file}:{files}"}, `C:\current.txt`, marked)
+	want := []string{`--pair=C:\current.txt:C:\a.txt`, `--pair=C:\current.txt:C:\b.txt`}
+	if !reflect.DeepEqual(got, want) {
+		t.Errorf("got %v, want %v", got, want)
+	}
+}
+
 func TestExpandArgs_MixedArgs(t *testing.T) {
 	// {file} と {files} を含まない引数はそのまま保持される
 	marked := []string{`C:\a.txt`, `C:\b.txt`}

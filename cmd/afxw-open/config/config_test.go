@@ -69,3 +69,66 @@ func TestLoadFrom_NotFound(t *testing.T) {
 		t.Error("存在しないファイルでエラーが発生しませんでした")
 	}
 }
+
+func TestLoad_CreatesDefaultConfig(t *testing.T) {
+	configPath := filepath.Join(t.TempDir(), "config.toml")
+	localPath := filepath.Join(t.TempDir(), "afxw-open.toml")
+
+	cfg, err := load(configPath, localPath)
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+	if len(cfg.Programs) != len(DefaultConfig().Programs) {
+		t.Errorf("got %d programs, want %d", len(cfg.Programs), len(DefaultConfig().Programs))
+	}
+	if _, err := os.Stat(configPath); err != nil {
+		t.Errorf("default config was not created: %v", err)
+	}
+}
+
+func TestLoad_UserConfigTakesPriority(t *testing.T) {
+	configPath := filepath.Join(t.TempDir(), "config.toml")
+	localPath := filepath.Join(t.TempDir(), "afxw-open.toml")
+	if err := os.WriteFile(configPath, []byte("[[program]]\nname = \"User\"\ncommand = \"user.exe\"\n"), 0644); err != nil {
+		t.Fatal(err)
+	}
+	if err := os.WriteFile(localPath, []byte("[[program]]\nname = \"Local\"\ncommand = \"local.exe\"\n"), 0644); err != nil {
+		t.Fatal(err)
+	}
+
+	cfg, err := load(configPath, localPath)
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+	if len(cfg.Programs) != 1 || cfg.Programs[0].Command != "user.exe" {
+		t.Errorf("unexpected programs: %+v", cfg.Programs)
+	}
+}
+
+func TestLoad_UsesLocalConfigWhenUserConfigMissing(t *testing.T) {
+	configPath := filepath.Join(t.TempDir(), "config.toml")
+	localPath := filepath.Join(t.TempDir(), "afxw-open.toml")
+	if err := os.WriteFile(localPath, []byte("[[program]]\nname = \"Local\"\ncommand = \"local.exe\"\n"), 0644); err != nil {
+		t.Fatal(err)
+	}
+
+	cfg, err := load(configPath, localPath)
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+	if len(cfg.Programs) != 1 || cfg.Programs[0].Command != "local.exe" {
+		t.Errorf("unexpected programs: %+v", cfg.Programs)
+	}
+}
+
+func TestLoad_InvalidUserConfig(t *testing.T) {
+	configPath := filepath.Join(t.TempDir(), "config.toml")
+	localPath := filepath.Join(t.TempDir(), "afxw-open.toml")
+	if err := os.WriteFile(configPath, []byte("invalid toml [[["), 0644); err != nil {
+		t.Fatal(err)
+	}
+
+	if _, err := load(configPath, localPath); err == nil {
+		t.Error("expected error for invalid user config")
+	}
+}
