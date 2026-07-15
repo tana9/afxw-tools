@@ -8,6 +8,7 @@ import (
 	"path/filepath"
 	"strconv"
 	"strings"
+	"sync"
 )
 
 type Entry struct {
@@ -46,9 +47,22 @@ func candidateExecutablePaths() []string {
 	return candidates
 }
 
+var (
+	resolveOnce      sync.Once
+	resolvedExecPath string
+)
+
 // ResolveExecutable はPATH上のzoxideを探し、見つからない場合はscoopやwingetの既定インストール先を確認します。
 // どれでも見つからない場合は "zoxide" をそのまま返し、実行時にexec.Commandがエラーを報告します。
+// 探索結果はプロセス内でキャッシュされ、2回目以降の呼び出しはファイルシステムを再走査しません。
 func ResolveExecutable() string {
+	resolveOnce.Do(func() {
+		resolvedExecPath = resolveExecutable()
+	})
+	return resolvedExecPath
+}
+
+func resolveExecutable() string {
 	if path, err := exec.LookPath("zoxide"); err == nil {
 		return path
 	}

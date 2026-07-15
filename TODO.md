@@ -10,5 +10,6 @@
   `cmd/afxw-open/config/config.go`(33-85行目)と `cmd/afxw-launcher/config/config_loader.go`(14-103行目)で、「ユーザー設定パス→ローカル設定パス→無ければデフォルト生成」のフォールバック構造と `LoadFrom`(`toml.DecodeFile`)・`createDefaultConfigFile`(`os.MkdirAll`→`os.Create`→`toml.NewEncoder().Encode`)がほぼ同一実装で重複している。片方だけ直して直し忘れるリスクあり。
   対応: `internal/configutil` を新設し、`Exists`/`LoadFrom[T]`/`Write`/`Append` の汎用ヘルパーに切り出した。`afxw-open/config` と `afxw-launcher/config` の両方をこのヘルパー経由に書き換え、`toml` パッケージへの直接依存とボイラープレートを削除。テスト(`internal/configutil/configutil_test.go`)も追加し、`go build ./...` / `go test ./...` / `go vet ./...` で回帰が無いことを確認済み。
 
-- [ ] **[suggestion] zoxide実行ファイル探索のGlob結果をキャッシュ検討**
-  `cmd/afxw-zox/zoxide/zoxide.go`(19-47行目)の `candidateExecutablePaths()` は呼び出しのたびにWinGetパッケージ配下へ `filepath.Glob` を2回実行する。現状は `ResolveExecutable()` がプロセスあたり1回しか呼ばれないため実害はないが、将来呼び出し回数が増える場合に備えて結果キャッシュの余地あり。優先度は低い。
+- [x] **[suggestion] zoxide実行ファイル探索のGlob結果をキャッシュ検討**
+  `cmd/afxw-zox/zoxide/zoxide.go` の `candidateExecutablePaths()` は呼び出しのたびにWinGetパッケージ配下へ `filepath.Glob` を2回実行する。現状 `ResolveExecutable()` はプロセスあたり1回しか呼ばれないため実害はなかった(ユーザー判断により、将来の呼び出し増加に備えて実装)。
+  対応: `sync.Once` で `ResolveExecutable()` の結果をプロセス内キャッシュするようにした。既存テストは `candidateExecutablePaths()` を直接呼んでおり `ResolveExecutable()` 経由ではないため、テスト分離への影響なし。`go build ./...` / `go vet ./...` / `go test ./...` で回帰が無いことを確認済み。
