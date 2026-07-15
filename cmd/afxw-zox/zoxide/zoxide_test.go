@@ -112,6 +112,99 @@ func TestParseQueryOutput_InvalidLinesSkipped(t *testing.T) {
 	}
 }
 
+func TestCandidateExecutablePaths_ScoopEnv(t *testing.T) {
+	t.Setenv("SCOOP", `C:\custom\scoop`)
+	t.Setenv("SCOOP_GLOBAL", `C:\custom\scoop-global`)
+	t.Setenv("LOCALAPPDATA", "")
+
+	got := candidateExecutablePaths()
+	want := []string{
+		`C:\custom\scoop\shims\zoxide.exe`,
+		`C:\custom\scoop-global\shims\zoxide.exe`,
+	}
+	if len(got) != len(want) {
+		t.Fatalf("got %v, want %v", got, want)
+	}
+	for i := range want {
+		if got[i] != want[i] {
+			t.Errorf("[%d]: got %q, want %q", i, got[i], want[i])
+		}
+	}
+}
+
+func TestCandidateExecutablePaths_FallbackToDefaults(t *testing.T) {
+	t.Setenv("SCOOP", "")
+	t.Setenv("SCOOP_GLOBAL", "")
+	t.Setenv("ProgramData", `C:\ProgramData`)
+	t.Setenv("LOCALAPPDATA", "")
+
+	home, err := os.UserHomeDir()
+	if err != nil {
+		t.Skip("cannot determine home directory")
+	}
+
+	got := candidateExecutablePaths()
+	want := []string{
+		filepath.Join(home, "scoop", "shims", "zoxide.exe"),
+		`C:\ProgramData\scoop\shims\zoxide.exe`,
+	}
+	if len(got) != len(want) {
+		t.Fatalf("got %v, want %v", got, want)
+	}
+	for i := range want {
+		if got[i] != want[i] {
+			t.Errorf("[%d]: got %q, want %q", i, got[i], want[i])
+		}
+	}
+}
+
+func TestCandidateExecutablePaths_WingetLinks(t *testing.T) {
+	localAppData := t.TempDir()
+	t.Setenv("LOCALAPPDATA", localAppData)
+
+	got := candidateExecutablePaths()
+	want := filepath.Join(localAppData, "Microsoft", "WinGet", "Links", "zoxide.exe")
+	found := false
+	for _, c := range got {
+		if c == want {
+			found = true
+			break
+		}
+	}
+	if !found {
+		t.Errorf("expected %q among candidates, got %v", want, got)
+	}
+}
+
+func TestCandidateExecutablePaths_WingetPackagesGlob(t *testing.T) {
+	t.Setenv("SCOOP", "")
+	t.Setenv("SCOOP_GLOBAL", "")
+	t.Setenv("ProgramData", "")
+	localAppData := t.TempDir()
+	t.Setenv("LOCALAPPDATA", localAppData)
+
+	nestedDir := filepath.Join(localAppData, "Microsoft", "WinGet", "Packages", "ajeetdsouza.zoxide_Microsoft.Winget.Source_8wekyb3d8bbwe", "zoxide-0.9.4-x86_64-pc-windows-msvc")
+	if err := os.MkdirAll(nestedDir, 0755); err != nil {
+		t.Fatal(err)
+	}
+	exePath := filepath.Join(nestedDir, "zoxide.exe")
+	if err := os.WriteFile(exePath, []byte{}, 0644); err != nil {
+		t.Fatal(err)
+	}
+
+	got := candidateExecutablePaths()
+	found := false
+	for _, c := range got {
+		if c == exePath {
+			found = true
+			break
+		}
+	}
+	if !found {
+		t.Errorf("expected %q among candidates, got %v", exePath, got)
+	}
+}
+
 func TestPaths(t *testing.T) {
 	entries := []Entry{
 		{Path: `C:\a`, Score: 10.0},

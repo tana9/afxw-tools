@@ -150,7 +150,7 @@ afxw-bm.exe -a "C:\path\to\directory"
 
 [zoxide](https://github.com/ajeetdsouza/zoxide) のfrecency（頻度×最近性）データベースから選択してあふwで移動します。ターミナルでよく使うフォルダにすばやくジャンプできます。
 
-**前提:** zoxideがインストールされ、データベースが構築されていること。
+**前提:** zoxideがインストールされ、データベースが構築されていること。PATHにzoxideが無い場合でも、scoopやwingetでインストールされていれば既定のインストール先（scoop: `%SCOOP%\shims` または `%USERPROFILE%\scoop\shims`、グローバルインストールなら `%SCOOP_GLOBAL%\shims` または `%ProgramData%\scoop\shims` / winget: `%LOCALAPPDATA%\Microsoft\WinGet\Links` またはPackages配下）を自動的に探して実行します。
 
 ```bash
 # zoxideのデータベースから選択して移動

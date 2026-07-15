@@ -7,6 +7,7 @@ import (
 	"strings"
 	"time"
 
+	"github.com/tana9/afxw-tools/cmd/afxw-zox/zoxide"
 	"github.com/tana9/afxw-tools/internal/afx"
 	"github.com/tana9/afxw-tools/internal/stringutil"
 )
@@ -36,7 +37,7 @@ func runImport(a afx.AFX) error {
 	}
 	tmpFile.Close()
 
-	zoxCmd := exec.Command("zoxide", "import", "--from", "z", "--merge", tmpFile.Name())
+	zoxCmd := exec.Command(zoxide.ResolveExecutable(), "import", "--from", "z", "--merge", tmpFile.Name())
 	zoxCmd.Stdout = os.Stdout
 	zoxCmd.Stderr = os.Stderr
 	if err := zoxCmd.Run(); err != nil {
