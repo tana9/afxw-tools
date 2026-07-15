@@ -84,11 +84,14 @@ func (a *oleAFX) getWindowHistories(win int) ([]string, error) {
 	if err != nil {
 		return nil, fmt.Errorf("履歴件数の取得に失敗しました: %w", err)
 	}
-	count := res.Value().(int32)
+	count, err := toInt(res.Value())
 	res.Clear()
+	if err != nil {
+		return nil, fmt.Errorf("履歴件数の取得に失敗しました: %w", err)
+	}
 
 	dirs := make([]string, 0, count)
-	for i := 0; i < int(count); i++ {
+	for i := range count {
 		res, err := oleutil.CallMethod(a.afxw, "HisDir", win, i)
 		if err != nil {
 			return nil, fmt.Errorf("履歴の取得に失敗しました: %w", err)
@@ -97,6 +100,23 @@ func (a *oleAFX) getWindowHistories(win int) ([]string, error) {
 		res.Clear()
 	}
 	return dirs, nil
+}
+
+// toInt はCOMのVARIANTから返る整数値を型を問わずintに変換します。
+// afxw.obj側の実装差異でVARIANTのサブタイプ(int16/int32/int64等)が変わってもpanicしないようにするための変換です。
+func toInt(v any) (int, error) {
+	switch n := v.(type) {
+	case int:
+		return n, nil
+	case int16:
+		return int(n), nil
+	case int32:
+		return int(n), nil
+	case int64:
+		return int(n), nil
+	default:
+		return 0, fmt.Errorf("予期しない型です (%T)", v)
+	}
 }
 
 func (a *oleAFX) EXCD(path string) error {

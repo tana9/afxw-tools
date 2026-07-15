@@ -13,3 +13,12 @@
 - [x] **[suggestion] zoxide実行ファイル探索のGlob結果をキャッシュ検討**
   `cmd/afxw-zox/zoxide/zoxide.go` の `candidateExecutablePaths()` は呼び出しのたびにWinGetパッケージ配下へ `filepath.Glob` を2回実行する。現状 `ResolveExecutable()` はプロセスあたり1回しか呼ばれないため実害はなかった(ユーザー判断により、将来の呼び出し増加に備えて実装)。
   対応: `sync.Once` で `ResolveExecutable()` の結果をプロセス内キャッシュするようにした。既存テストは `candidateExecutablePaths()` を直接呼んでおり `ResolveExecutable()` 経由ではないため、テスト分離への影響なし。`go build ./...` / `go vet ./...` / `go test ./...` で回帰が無いことを確認済み。
+
+- [x] **[warning] `internal/afx/afx.go:87` — COM戻り値への型アサーションがpanicしうる**
+  `HisDirCount` の戻り値(VARIANT)を `res.Value().(int32)` と直接アサーションしており、`afxw.obj` 側の実装差異で別の整数サブタイプ(int16/int64等)が返るとpanicする。同ファイルの他の呼び出し(`extract`)は `fmt.Sprint` で型を問わず安全に処理しているのに対し、ここだけ一貫性が無かった。
+  対応: `toInt(v any) (int, error)` を追加し、int/int16/int32/int64を許容してpanicせずエラーを返すように変更。あわせて `for i := 0; i < int(count); i++` を Go 1.22以降の `for i := range count` に置き換え。`toInt` の単体テストを `internal/afx/afx_test.go` に追加。
+
+## Go 1.26スタイルチェック
+
+- `internal/afx/afx.go` の古典的カウントループを `for i := range count` に置き換え済み(上記参照)。
+- それ以外は `strings.SplitSeq`(bookmark.go, zoxide.go)、`testing.B.Loop()`(zoxide_bench_test.go)、ジェネリクス(`stringutil.RemoveDuplicates`, `configutil.LoadFrom[T]`)など既にモダンな書き方が使われており、`interface{}`・`sort.Slice`・`ioutil`等の古い書き方は見つからなかった。追加対応なし。

@@ -34,6 +34,38 @@ func TestEnsureTrailingBackslash(t *testing.T) {
 	}
 }
 
+func TestToInt(t *testing.T) {
+	t.Run("supported types", func(t *testing.T) {
+		tests := []struct {
+			name  string
+			input any
+			want  int
+		}{
+			{"int", int(3), 3},
+			{"int16", int16(3), 3},
+			{"int32", int32(3), 3},
+			{"int64", int64(3), 3},
+		}
+		for _, tt := range tests {
+			t.Run(tt.name, func(t *testing.T) {
+				got, err := toInt(tt.input)
+				if err != nil {
+					t.Fatalf("unexpected error: %v", err)
+				}
+				if got != tt.want {
+					t.Errorf("got %d, want %d", got, tt.want)
+				}
+			})
+		}
+	})
+
+	t.Run("unsupported type", func(t *testing.T) {
+		if _, err := toInt("3"); err == nil {
+			t.Error("expected error for unsupported type, got nil")
+		}
+	})
+}
+
 func TestParseMarkedFiles(t *testing.T) {
 	t.Run("marked files", func(t *testing.T) {
 		got, err := parseMarkedFiles("C:\\a.txt C:\\b.txt", nil)
