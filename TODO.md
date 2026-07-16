@@ -18,6 +18,78 @@
   `HisDirCount` の戻り値(VARIANT)を `res.Value().(int32)` と直接アサーションしており、`afxw.obj` 側の実装差異で別の整数サブタイプ(int16/int64等)が返るとpanicする。同ファイルの他の呼び出し(`extract`)は `fmt.Sprint` で型を問わず安全に処理しているのに対し、ここだけ一貫性が無かった。
   対応: `toInt(v any) (int, error)` を追加し、int/int16/int32/int64を許容してpanicせずエラーを返すように変更。あわせて `for i := 0; i < int(count); i++` を Go 1.22以降の `for i := range count` に置き換え。`toInt` の単体テストを `internal/afx/afx_test.go` に追加。
 
+## コードレビュー第2弾(2026-07-16)
+
+パフォーマンス・共通化・一貫性観点の全体レビューで洗い出した対応項目。パフォーマンスについては、短命な対話型CLIでありデータ量も小さいため、既対応(zoxideキャッシュ等)以上の最適化は不要と判断。
+
+- [x] **[suggestion] 「一覧→fuzzyfinder選択→EXCD移動」フローを共通化する**
+  `cmd/afxw-his/main.go`(run)、`cmd/afxw-bm/main.go`(runSelect)、`cmd/afxw-zox/main.go`(run)で、「候補リスト取得→空なら終了→`f.Find`→`ErrAbort`ならnil→`a.EXCD(選択パス)`」の構造がほぼ同一で3箇所に重複している。`ErrAbort`をキャンセル扱いにするリポジトリ規約も分散している。
+  対応: `internal/selectnav` を新設し `SelectAndMove(a afx.AFX, f finder.Finder, dirs []string) error` に共通化。空候補・キャンセル時はnil、EXCD失敗時は「ディレクトリ移動に失敗しました」でラップ。3コマンドとも候補の取得と空メッセージ表示のみ持つ形に書き換え、`selectnav_test.go` を追加。
+
+- [x] **[warning] ブックマークの重複判定・正規化が Load と Add で不整合**
+  `cmd/afxw-bm/bookmark/bookmark.go` で、`Add` は `strings.EqualFold` の大文字小文字を無視した比較なのに、`Load` の重複除去(`stringutil.RemoveDuplicates`)は大文字小文字を区別するため、手編集等で `C:\Foo` と `c:\foo` が両方あると選択リストに両方出る。また `Add` は `filepath.Clean` で正規化するが `Load` はしないため、末尾 `\` 付き等の既存行が重複チェックをすり抜ける。
+  対応: `readAll`/`parseLines` ヘルパーに分離し、`parseLines` で `filepath.Clean` による正規化と小文字化キーでの重複除去を実施。`Load`/`Add` 双方がこれを共有する形に書き換え。
+
+- [x] **[suggestion] `bookmark.Add` が末尾改行の無いファイルで行を結合してしまう**
+  `bookmark.Add` は `newItem + "\n"` を単純追記するため、手編集で末尾改行が無い `bookmarks.txt` に追加すると最終行と新エントリが1行に結合される。
+  対応: 追記前にファイル内容が `\n` で終わっているか確認し、無ければ改行を前置してから追記するように変更。
+
+- [x] **[suggestion] afxw-zox の `singleinstance.Acquire` 呼び出し順を他ツールと揃える**
+  `afxw-his`/`afxw-bm` は「`Acquire`→`NewOleAFX`」の順だが、`cmd/afxw-zox/main.go` はCOM接続後に `Acquire` しており、二重起動時に無駄にCOM接続してから最大3秒待つ。
+  対応: `--import-history`(非対話)の分岐を先に処理し、対話パスでは `Acquire`→`NewOleAFX` の順に変更。
+
+- [x] **[suggestion] launcher設定移行の `DefaultConfig().Menu[4]` マジックインデックスを排除する**
+  `cmd/afxw-launcher/config/config_loader.go` の `addOpenMenuItem`/`appendOpenMenuItem` が「ファイルを開く」メニューを `Menu[4]` で参照しており、`DefaultConfig` のメニュー順を変えると移行処理が黙って壊れる。
+  対応: `openMenuItem()` を新設し、`DefaultConfig` と移行処理(`addOpenMenuItem`/`appendOpenMenuItem`)の両方から参照するように変更。
+
+- [x] **[suggestion] `cmdutil.Find` がディレクトリを実行ファイルとして返しうる**
+  `internal/cmdutil/cmdutil.go` の絶対パス判定と `fileExists` は `os.Stat` の成功のみを見ておりディレクトリでも「見つかった」扱いになる。後段の `exec.Command` で失敗するため実害は小さいがエラーメッセージが分かりにくい。
+  対応: `fileExists` に `!info.IsDir()` チェックを追加し、絶対パス分岐も `fileExists` 経由に統一。
+
+- [x] **[suggestion] 細かな改善**
+  - [x] `internal/cliutil/cliutil.go`: 「何かキーを押すと終了します」と表示するが `fmt.Scanln()` はEnterが必要。メッセージを「Enterキーを押すと終了します」に直すか、実際に1キー読み取りにする。
+    対応: ブックマーク未登録時の案内が読めない問題の修正とあわせて、`cliutil.WaitForEnter()` として共通化しメッセージを「Enterキーを押すと終了します...」に修正。
+  - [x] エラーコンテキストの二重ラップ: `afx.Histories` 内でラップ済みのエラーを `afxw-his/main.go` の run で再度ラップしており冗長。
+    対応: his run・zox run/runImport・bm runSelect/addBookmark で、下位層が既にコンテキスト付きでラップしているエラーの再ラップを削除。テストの期待メッセージも更新。
+  - [x] `configutil.Exists`→`LoadFrom` の2段階を、`LoadFrom` を直接呼んで `os.ErrNotExist` で分岐する形にすれば `Exists` を削減できる(TOCTOUも解消)。
+    対応: `configutil.Exists` を削除し、launcher/openの設定ロードを `LoadFrom`+`errors.Is(err, os.ErrNotExist)` 判定に書き換え。`LoadFrom` の `%w` ラップが `os.ErrNotExist` を保持することを保証するテストを追加。
+
+## コードレビュー第3弾(2026-07-16)
+
+第2弾の対応後diffに対するマルチエージェントレビュー(8角度×検証付き)で生存した項目。検証で「大文字小文字を無視したブックマーク統合はNTFSケースセンシティブディレクトリを潰す」という候補は、CLAUDE.md明記の設計方針かつAdd既存動作との整合修正のためREFUTED(対応不要)と判定済み。
+
+- [x] **[warning] afxw-hisだけ空履歴時に無言でウィンドウが閉じる**
+  `cmd/afxw-his/main.go` のrunには空履歴時のメッセージ表示+`cliutil.WaitForEnter()` が無く、`selectnav.SelectAndMove` が空candidatesで黙ってnilを返すため、あふwから起動したコンソールが説明なく即閉じする。bm/zoxで直したのと同じUXバグが3ツール中hisにだけ残存。
+  対応: `cliutil.Notice`(errorを実装する案内メッセージ型)を新設し、`cliutil.Run` がNoticeを検出したら表示+Enter待ちで正常終了するよう一元化。hisのrunは空履歴時に「フォルダ履歴が見つかりません。」のNoticeを返す。
+
+- [x] **[warning] ブックマークの大文字小文字同一視がToLowerとEqualFoldの2機構に分裂し、Unicodeで実際に判定が食い違う**
+  `cmd/afxw-bm/bookmark/bookmark.go` で、parseLinesは `strings.ToLower` キーのmap、Addは `strings.EqualFold` スキャンで同じ規則を別実装している。`strings.ToLower("İ")=="i"` はtrueだが `strings.EqualFold("İ","i")` はfalse(U+0130、実行確認済み)のため、手編集ファイルにU+0130を含むパスがあるとLoadでは統合されるのにAddの重複チェックは素通りする。
+  対応: `normKey`(strings.ToLower)を新設し、parseLinesのdedupとAddの重複チェックの両方が同じキーで比較するように統一。U+0130の回帰テスト(`TestAdd_UnicodeCaseFold`)を追加。
+
+- [x] **[suggestion] cliutil.WaitForEnterがユニットテスト対象関数内にあり、TTY接続stdinでテストがハングしうる**
+  `cmd/afxw-bm/main.go` runSelect と `cmd/afxw-zox/main.go` run の空ケース分岐が実物の `WaitForEnter`(fmt.Scanln)を呼ぶため、`TestRunSelect_EmptyBookmarks`/`TestRun_EmptyEntries` はテストバイナリ直接実行やpty割当のIDEランナーでEnter入力待ちになりうる(CI/通常のgo testではstdinがnull接続のため即返る)。
+  対応: 空ケースの案内をNotice返却に変更し、WaitForEnter呼び出しを `cliutil.Run`(テストから呼ばれないmain経路)へ集約。runSelect/runはブロッキング呼び出しを持たなくなり、テストはNotice型を検証する形に更新。
+
+- [x] **[suggestion] afxw-zoxのNewOleAFX+エラーラップ+defer Closeブロックが2分岐に複製された**
+  Acquire順序修正の際に、`cmd/afxw-zox/main.go` Action内のimport分岐(32-37行)と対話分岐(44-48行)に同一の接続ブロックが複製された。his/bm mainの同型ブロックも含めると4箇所以上。
+  対応: Acquireを `if !importHistory` でゲートして接続を1回に集約。さらに `afx.Connect()` ヘルパーを新設し、his/bm/zox/launcher(args.go)の接続+日本語ラップを全て共通化。
+
+- [x] **[suggestion] parseLinesの手実装dedupをstringutilのキー付き汎用版に統合する**
+  `parseLines` のseen-mapパターンは `stringutil.RemoveDuplicates` と構造的に同一で、キー変換の有無だけが違う。
+  対応: `stringutil.RemoveDuplicatesBy[T, K]` を追加し `RemoveDuplicates` をそのラッパー化。parseLinesは「分割・Clean」+`RemoveDuplicatesBy(lines, normKey)` の2パスに書き換え。テスト追加。
+
+- [x] **[suggestion] loadExistingConfigのbool戻り値は cfg != nil と常に一致し冗長**
+  `cmd/afxw-launcher/config/config_loader.go` の `(*Config, bool, error)` は全リターンパスでboolが `cfg != nil` から導出可能(検証済み)。同じdiffで簡素化したafxw-open側のload(2値)とスタイルも乖離。
+  対応: `loadExistingConfig` 自体を削除し、`configutil.TryLoad[T]`(2値、未存在は nil, nil)への直接呼び出しに置き換え。呼び出し側は `cfg != nil` で分岐。
+
+- [x] **[suggestion] LoadFrom+os.ErrNotExist分岐がlauncher/openの2箇所に重複**
+  「LoadFrom→ErrNotExistなら未存在扱い→他エラーは伝播」の3分岐が `config_loader.go` と `afxw-open/config/config.go` に同型で存在する。launcher側はユーザー設定のみmigrateする非対称があるため「最初に見つかったものをロード」型の共通化は不適合だが、パス単位のヘルパーなら両方に適合する(検証済み)。
+  対応: `configutil.TryLoad[T](path) (*T, error)` を追加し(boolなしの2値に統一)、launcher/openの両loadから使用。ErrNotExist判定はconfigutil内の1箇所のみに。テスト追加。
+
+- [x] **[suggestion] diffで書き換えた3関数に日本語docコメントが無い(CLAUDE.md規約違反)**
+  CLAUDE.md「Add a Japanese comment for every function, including unexported functions」に対し、`bookmark.Add`(bookmark.go:62)、`loadExistingConfig`(config_loader.go:49)、`load`(afxw-open/config/config.go:47)がコメント無し(3箇所とも確認済み)。特にAddは正規化・重複判定・末尾改行と挙動が変わったのに説明が無い。
+  対応: `bookmark.Add`・launcher/openの `load` に日本語docコメントを追加(loadExistingConfigは削除により対象外)。Notice/Connect/TryLoad/RemoveDuplicatesBy等の新規関数にも規約どおりコメントを付与。
+
 ## Go 1.26スタイルチェック
 
 - `internal/afx/afx.go` の古典的カウントループを `for i := range count` に置き換え済み(上記参照)。

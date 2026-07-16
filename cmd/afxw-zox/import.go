@@ -15,7 +15,7 @@ import (
 func runImport(a afx.AFX) error {
 	dirs, err := a.Histories([]int{afx.WindowLeft, afx.WindowRight})
 	if err != nil {
-		return fmt.Errorf("履歴の取得に失敗しました: %w", err)
+		return err
 	}
 
 	dirs = stringutil.RemoveDuplicates(dirs)

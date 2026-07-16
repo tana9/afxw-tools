@@ -8,6 +8,7 @@ import (
 
 	"github.com/ktr0731/go-fuzzyfinder"
 	"github.com/tana9/afxw-tools/internal/afxtest"
+	"github.com/tana9/afxw-tools/internal/cliutil"
 )
 
 func TestRunSelect_Normal(t *testing.T) {
@@ -38,9 +39,11 @@ func TestRunSelect_EmptyBookmarks(t *testing.T) {
 	afxMock := &afxtest.MockAFX{}
 	finderMock := &afxtest.MockFinder{}
 
-	// ファイルなし（空のブックマーク）
-	if err := runSelect(afxMock, finderMock, bmPath); err != nil {
-		t.Fatalf("予期しないエラー: %v", err)
+	// ファイルなし（空のブックマーク）はNoticeで案内する
+	err := runSelect(afxMock, finderMock, bmPath)
+	var notice *cliutil.Notice
+	if !errors.As(err, &notice) {
+		t.Fatalf("cliutil.Noticeが期待されましたが、%T が返りました: %v", err, err)
 	}
 
 	// finderもEXCDも呼ばれていないこと

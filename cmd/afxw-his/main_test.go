@@ -7,6 +7,7 @@ import (
 
 	"github.com/tana9/afxw-tools/internal/afx"
 	"github.com/tana9/afxw-tools/internal/afxtest"
+	"github.com/tana9/afxw-tools/internal/cliutil"
 )
 
 func TestRun(t *testing.T) {
@@ -54,7 +55,9 @@ func TestRun(t *testing.T) {
 			afxMock: &afxtest.MockAFX{
 				HistoriesResult: []string{},
 			},
-			finderMock: &afxtest.MockFinder{},
+			finderMock:  &afxtest.MockFinder{},
+			expectErr:   true,
+			expectedErr: "フォルダ履歴が見つかりません。",
 		},
 		{
 			name: "error from histories",
@@ -63,7 +66,7 @@ func TestRun(t *testing.T) {
 			},
 			finderMock:  &afxtest.MockFinder{},
 			expectErr:   true,
-			expectedErr: "履歴の取得に失敗しました: histories error",
+			expectedErr: "histories error",
 		},
 		{
 			name: "error from excd",
@@ -193,5 +196,18 @@ func TestRun_WithDuplicates(t *testing.T) {
 	// 重複が除去されているため、インデックス1は"C:\\Users"を指す
 	if afxMock.ExcdPath != "C:\\Users" {
 		t.Errorf("expected excd path %q, got %q", "C:\\Users", afxMock.ExcdPath)
+	}
+}
+
+func TestRun_EmptyHistoryReturnsNotice(t *testing.T) {
+	afxMock := &afxtest.MockAFX{HistoriesResult: []string{}}
+
+	err := run(afxMock, &afxtest.MockFinder{}, nil)
+	var notice *cliutil.Notice
+	if !errors.As(err, &notice) {
+		t.Fatalf("cliutil.Noticeが期待されましたが、%T が返りました: %v", err, err)
+	}
+	if afxMock.ExcdPath != "" {
+		t.Errorf("EXCDが呼ばれるべきではありません: %s", afxMock.ExcdPath)
 	}
 }

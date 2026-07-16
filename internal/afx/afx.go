@@ -67,6 +67,16 @@ func NewOleAFX() (AFX, error) {
 	return &oleAFX{afxw: afxw, unknown: unknown}, nil
 }
 
+// Connect はあふwへ接続し、失敗時は日本語コンテキスト付きのエラーを返します。
+// 各コマンドで重複していた接続エラーのラップを一元化するためのヘルパーです。
+func Connect() (AFX, error) {
+	a, err := NewOleAFX()
+	if err != nil {
+		return nil, fmt.Errorf("afxw.objへの接続に失敗しました: %w", err)
+	}
+	return a, nil
+}
+
 func (a *oleAFX) Histories(wins []int) ([]string, error) {
 	var dirs []string
 	for _, win := range wins {

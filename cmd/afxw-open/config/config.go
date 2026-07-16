@@ -43,21 +43,16 @@ func Load() (*Config, error) {
 	return load(configPath, localPath)
 }
 
+// load はユーザー設定→ローカル設定の順に読み込み、どちらも無ければデフォルト設定を生成します。
 func load(configPath, localPath string) (*Config, error) {
-	exists, err := configutil.Exists(configPath)
-	if err != nil {
-		return nil, err
-	}
-	if exists {
-		return LoadFrom(configPath)
-	}
-
-	exists, err = configutil.Exists(localPath)
-	if err != nil {
-		return nil, err
-	}
-	if exists {
-		return LoadFrom(localPath)
+	for _, path := range []string{configPath, localPath} {
+		cfg, err := configutil.TryLoad[Config](path)
+		if err != nil {
+			return nil, err
+		}
+		if cfg != nil {
+			return cfg, nil
+		}
 	}
 
 	cfg := DefaultConfig()

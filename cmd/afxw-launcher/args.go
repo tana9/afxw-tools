@@ -26,9 +26,9 @@ func resolveArgs(args []string) ([]string, error) {
 		return args, nil
 	}
 
-	a, err := afx.NewOleAFX()
+	a, err := afx.Connect()
 	if err != nil {
-		return nil, fmt.Errorf("afxw.objへの接続に失敗しました: %w", err)
+		return nil, err
 	}
 	defer a.Close()
 

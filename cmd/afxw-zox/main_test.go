@@ -8,6 +8,7 @@ import (
 	"github.com/ktr0731/go-fuzzyfinder"
 	"github.com/tana9/afxw-tools/cmd/afxw-zox/zoxide"
 	"github.com/tana9/afxw-tools/internal/afxtest"
+	"github.com/tana9/afxw-tools/internal/cliutil"
 )
 
 func makeQuery(entries []zoxide.Entry, err error) func() ([]zoxide.Entry, error) {
@@ -38,8 +39,11 @@ func TestRun_EmptyEntries(t *testing.T) {
 	finderMock := &afxtest.MockFinder{}
 	query := makeQuery([]zoxide.Entry{}, nil)
 
-	if err := run(afxMock, finderMock, query); err != nil {
-		t.Fatalf("予期しないエラー: %v", err)
+	// データベースが空の場合はNoticeで案内する
+	err := run(afxMock, finderMock, query)
+	var notice *cliutil.Notice
+	if !errors.As(err, &notice) {
+		t.Fatalf("cliutil.Noticeが期待されましたが、%T が返りました: %v", err, err)
 	}
 
 	if afxMock.ExcdPath != "" {
@@ -56,7 +60,7 @@ func TestRun_QueryError(t *testing.T) {
 	if err == nil {
 		t.Fatal("エラーが期待されましたが、nilが返りました")
 	}
-	if err.Error() != "zoxideデータベースの取得に失敗しました: query error" {
+	if err.Error() != "query error" {
 		t.Errorf("予期しないエラーメッセージ: %v", err)
 	}
 }

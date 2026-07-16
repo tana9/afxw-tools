@@ -2,15 +2,14 @@ package main
 
 import (
 	"context"
-	"errors"
 	"fmt"
 	"path/filepath"
 
-	"github.com/ktr0731/go-fuzzyfinder"
 	"github.com/tana9/afxw-tools/cmd/afxw-bm/bookmark"
 	"github.com/tana9/afxw-tools/internal/afx"
 	"github.com/tana9/afxw-tools/internal/cliutil"
 	"github.com/tana9/afxw-tools/internal/finder"
+	"github.com/tana9/afxw-tools/internal/selectnav"
 	"github.com/tana9/afxw-tools/internal/singleinstance"
 	"github.com/urfave/cli/v3"
 )
@@ -35,7 +34,7 @@ func main() {
 				target := cmd.String("add")
 
 				if target == "" || target == "." {
-					if a, err := afx.NewOleAFX(); err == nil {
+					if a, err := afx.Connect(); err == nil {
 						defer a.Close()
 						if path, err := a.GetActivePath(); err == nil && path != "" {
 							target = path
@@ -59,9 +58,9 @@ func main() {
 				return fmt.Errorf("ブックマークファイルのパス取得に失敗しました: %w", err)
 			}
 
-			a, err := afx.NewOleAFX()
+			a, err := afx.Connect()
 			if err != nil {
-				return fmt.Errorf("afxw.obj への接続に失敗しました: %w", err)
+				return err
 			}
 			defer a.Close()
 
@@ -84,35 +83,23 @@ func addBookmark(path string) error {
 	}
 
 	if err := bookmark.Add(bmPath, absPath); err != nil {
-		return fmt.Errorf("ブックマークの追加に失敗しました: %w", err)
+		return err
 	}
 
 	fmt.Printf("ブックマークに追加しました: %s\n", absPath)
 	return nil
 }
 
+// runSelect はブックマークから選択してあふwで移動します。ブックマークが空の場合はNoticeを返します。
 func runSelect(a afx.AFX, f finder.Finder, bmPath string) error {
 	dirs, err := bookmark.Load(bmPath)
 	if err != nil {
-		return fmt.Errorf("ブックマークの読み込みに失敗しました: %w", err)
-	}
-
-	if len(dirs) == 0 {
-		fmt.Println("ブックマークが見つかりません。'afxw-bm -a' でブックマークを追加してください。")
-		return nil
-	}
-
-	idx, err := f.Find(dirs)
-	if err != nil {
-		if errors.Is(err, fuzzyfinder.ErrAbort) {
-			return nil // ESC / Ctrl+C でキャンセル
-		}
 		return err
 	}
 
-	if err := a.EXCD(dirs[idx]); err != nil {
-		return fmt.Errorf("ディレクトリ移動に失敗しました: %w", err)
+	if len(dirs) == 0 {
+		return &cliutil.Notice{Message: "ブックマークが見つかりません。'afxw-bm -a' でブックマークを追加してください。"}
 	}
 
-	return nil
+	return selectnav.SelectAndMove(a, f, dirs)
 }

@@ -1,29 +1,14 @@
 package configutil
 
 import (
+	"errors"
+	"os"
 	"path/filepath"
 	"testing"
 )
 
 type testConfig struct {
 	Name string `toml:"name"`
-}
-
-func TestExists(t *testing.T) {
-	dir := t.TempDir()
-	path := filepath.Join(dir, "config.toml")
-
-	if exists, err := Exists(path); err != nil || exists {
-		t.Fatalf("Exists() = %v, %v; ファイルが無い場合は false, nil を期待", exists, err)
-	}
-
-	if err := Write(path, &testConfig{Name: "a"}); err != nil {
-		t.Fatalf("Write() error = %v", err)
-	}
-
-	if exists, err := Exists(path); err != nil || !exists {
-		t.Fatalf("Exists() = %v, %v; ファイルがある場合は true, nil を期待", exists, err)
-	}
 }
 
 func TestWriteAndLoadFrom(t *testing.T) {
@@ -47,8 +32,12 @@ func TestLoadFromNotExist(t *testing.T) {
 	dir := t.TempDir()
 	path := filepath.Join(dir, "missing.toml")
 
-	if _, err := LoadFrom[testConfig](path); err == nil {
+	_, err := LoadFrom[testConfig](path)
+	if err == nil {
 		t.Fatal("LoadFrom() error = nil; 存在しないファイルはエラーを期待")
+	}
+	if !errors.Is(err, os.ErrNotExist) {
+		t.Fatalf("errors.Is(err, os.ErrNotExist) = false; err = %v", err)
 	}
 }
 
@@ -86,5 +75,25 @@ func TestAppendNotExist(t *testing.T) {
 
 	if err := Append(path, &testConfig{Name: "a"}); err == nil {
 		t.Fatal("Append() error = nil; 存在しないファイルはエラーを期待")
+	}
+}
+
+func TestTryLoad(t *testing.T) {
+	dir := t.TempDir()
+	path := filepath.Join(dir, "config.toml")
+
+	// 存在しない場合は (nil, nil)
+	cfg, err := TryLoad[testConfig](path)
+	if err != nil || cfg != nil {
+		t.Fatalf("TryLoad() = %v, %v; 存在しないファイルは nil, nil を期待", cfg, err)
+	}
+
+	if err := Write(path, &testConfig{Name: "afxw"}); err != nil {
+		t.Fatalf("Write() error = %v", err)
+	}
+
+	cfg, err = TryLoad[testConfig](path)
+	if err != nil || cfg == nil || cfg.Name != "afxw" {
+		t.Fatalf("TryLoad() = %+v, %v; 読み込み成功を期待", cfg, err)
 	}
 }
