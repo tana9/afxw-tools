@@ -87,10 +87,13 @@ func Add(path string, newItem string) error {
 	if err != nil {
 		return fmt.Errorf("追記用ブックマークファイルのオープンに失敗しました: %w", err)
 	}
-	defer f.Close()
 
 	if _, err := f.WriteString(entry); err != nil {
+		_ = f.Close()
 		return fmt.Errorf("ブックマークファイルへの書き込みに失敗しました: %w", err)
+	}
+	if err := f.Close(); err != nil {
+		return fmt.Errorf("ブックマークファイルのクローズに失敗しました: %w", err)
 	}
 
 	return nil

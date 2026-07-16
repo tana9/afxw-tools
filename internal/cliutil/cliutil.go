@@ -45,5 +45,5 @@ func Run(cmd *cli.Command) {
 // あふwから起動されたコンソールウィンドウがメッセージ表示直後に閉じて読めなくなるのを防ぐために使います。
 func WaitForEnter() {
 	fmt.Fprintln(os.Stderr, "Enterキーを押すと終了します...")
-	fmt.Scanln()
+	_, _ = fmt.Scanln()
 }

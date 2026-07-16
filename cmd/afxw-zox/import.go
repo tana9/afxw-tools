@@ -29,13 +29,15 @@ func runImport(a afx.AFX) error {
 	if err != nil {
 		return fmt.Errorf("一時ファイルの作成に失敗しました: %w", err)
 	}
-	defer os.Remove(tmpFile.Name())
+	defer func() { _ = os.Remove(tmpFile.Name()) }()
 
 	if _, err := tmpFile.WriteString(buildZFormat(dirs, time.Now().Unix())); err != nil {
-		tmpFile.Close()
+		_ = tmpFile.Close()
 		return fmt.Errorf("一時ファイルへの書き込みに失敗しました: %w", err)
 	}
-	tmpFile.Close()
+	if err := tmpFile.Close(); err != nil {
+		return fmt.Errorf("一時ファイルのクローズに失敗しました: %w", err)
+	}
 
 	zoxCmd := exec.Command(zoxide.ResolveExecutable(), "import", "--from", "z", "--merge", tmpFile.Name())
 	zoxCmd.Stdout = os.Stdout

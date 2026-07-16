@@ -95,7 +95,7 @@ func (a *oleAFX) getWindowHistories(win int) ([]string, error) {
 		return nil, fmt.Errorf("履歴件数の取得に失敗しました: %w", err)
 	}
 	count, err := toInt(res.Value())
-	res.Clear()
+	_ = res.Clear()
 	if err != nil {
 		return nil, fmt.Errorf("履歴件数の取得に失敗しました: %w", err)
 	}
@@ -107,7 +107,7 @@ func (a *oleAFX) getWindowHistories(win int) ([]string, error) {
 			return nil, fmt.Errorf("履歴の取得に失敗しました: %w", err)
 		}
 		dirs = append(dirs, fmt.Sprint(res.Value()))
-		res.Clear()
+		_ = res.Clear()
 	}
 	return dirs, nil
 }
@@ -183,7 +183,7 @@ func (a *oleAFX) extract(variable string) (string, error) {
 		return "", fmt.Errorf("変数の展開に失敗しました (%s): %w", variable, err)
 	}
 	value := fmt.Sprint(res.Value())
-	res.Clear()
+	_ = res.Clear()
 	return value, nil
 }
 

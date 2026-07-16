@@ -50,7 +50,9 @@ func TestAcquire_PreviousExited(t *testing.T) {
 	// ミューテックスを取得してすぐ終了するゴルーチン
 	go func() {
 		runtime.LockOSThread()
-		acquire(name, 0)
+		if err := acquire(name, 0); err != nil {
+			t.Errorf("ミューテックスの取得に失敗しました: %v", err)
+		}
 		close(exited)
 		// ゴルーチン終了でミューテックスが放棄される
 	}()

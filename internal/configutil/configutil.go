@@ -38,9 +38,12 @@ func Write(path string, cfg any) error {
 	if err != nil {
 		return fmt.Errorf("ファイルの作成に失敗しました: %w", err)
 	}
-	defer f.Close()
 	if err := toml.NewEncoder(f).Encode(cfg); err != nil {
+		_ = f.Close()
 		return fmt.Errorf("設定の書き込みに失敗しました: %w", err)
+	}
+	if err := f.Close(); err != nil {
+		return fmt.Errorf("設定ファイルのクローズに失敗しました: %w", err)
 	}
 	return nil
 }
@@ -52,13 +55,17 @@ func Append(path string, v any) error {
 	if err != nil {
 		return fmt.Errorf("ファイルのオープンに失敗しました: %w", err)
 	}
-	defer f.Close()
 
 	if _, err := f.WriteString("\n"); err != nil {
+		_ = f.Close()
 		return fmt.Errorf("改行の書き込みに失敗しました: %w", err)
 	}
 	if err := toml.NewEncoder(f).Encode(v); err != nil {
+		_ = f.Close()
 		return fmt.Errorf("設定の書き込みに失敗しました: %w", err)
+	}
+	if err := f.Close(); err != nil {
+		return fmt.Errorf("設定ファイルのクローズに失敗しました: %w", err)
 	}
 	return nil
 }
