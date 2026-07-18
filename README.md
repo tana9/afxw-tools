@@ -12,6 +12,7 @@
 | [afxw-zox](#afxw-zox) | zoxideのデータベースから選択して移動 |
 | [afxw-open](#afxw-open) | カーソル上のファイルをプログラム選択して開く |
 | [afxw-wt](#afxw-wt) | アクティブなペインのフォルダをWindows Terminalで開く |
+| [afxw-rg](#afxw-rg) | 現在のフォルダ以下をripgrepでキーワード検索 |
 
 すべてのツールはあふwが起動中の状態で使用します（OLE経由であふwと連携します）。
 
@@ -61,7 +62,7 @@ afxw-launcher.exe
 
 **設定ファイル:** `~/.config/afxw-launcher/config.toml`（実行ファイルと同フォルダの `config.toml` も可）
 
-ユーザー設定ファイルには、更新後の初回起動時に不足している標準の「ファイルを開く」メニューが自動追加されます。
+ユーザー設定ファイルには、更新後の初回起動時に不足している標準メニューが自動追加されます。
 
 ```toml
 [[menu]]
@@ -93,6 +94,18 @@ name = "ファイルを開く"
 description = "選択ファイルをプログラム選択して開く"
 command = "afxw-open.exe"
 args = ["{files}"]
+
+[[menu]]
+name = "Windows Terminalで開く"
+description = "現在のフォルダをWindows Terminalで開く"
+command = "afxw-wt.exe"
+args = []
+
+[[menu]]
+name = "キーワード検索"
+description = "現在のフォルダ以下をripgrepで検索"
+command = "afxw-rg.exe"
+args = []
 
 [settings]
 tool_dir = ""  # ツールの検索パス（省略時は実行ファイルと同じディレクトリ）
@@ -201,6 +214,30 @@ args = ["x", "-y"]
 
 ---
 
+### afxw-rg
+
+あふwのアクティブなペインのフォルダ以下を [ripgrep](https://github.com/BurntSushi/ripgrep) で検索し、結果をfuzzy finderから選んで該当ファイルのフォルダへ移動します。
+
+**前提:** `rg.exe` が実行ファイルと同じフォルダまたはPATHにあること。
+
+```bash
+# キーワードを対話入力（ランチャーからの標準動作）
+afxw-rg.exe
+
+# キーワードを直接指定
+afxw-rg.exe TODO
+
+# 固定文字列、隠しファイル、globを指定
+afxw-rg.exe -F --hidden -g "*.go" "error handling"
+
+# 文字コードを限定
+afxw-rg.exe --encoding sjis "検索文字列"
+```
+
+`--encoding auto`（既定）では、検索対象をUTF-8・UTF-8 BOMとShift_JISへ分類して検索結果を統合します。`utf-8`、`utf-8bom`、`sjis`（`shift_jis`も可）を指定すると文字コードを限定できます。
+
+---
+
 ### afxw-wt
 
 あふwのアクティブなペイン（ウィンドウ）のフォルダを開始ディレクトリとして [Windows Terminal](https://github.com/microsoft/terminal) を開きます。Windows Terminalは非同期で起動し、ツール自体はすぐに終了します。
@@ -239,6 +276,7 @@ task build-bm
 task build-zox
 task build-open
 task build-wt
+task build-rg
 ```
 
 ## テスト

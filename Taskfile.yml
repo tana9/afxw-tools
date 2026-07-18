@@ -16,6 +16,7 @@ tasks:
       - task: build-launcher
       - task: build-open
       - task: build-wt
+      - task: build-rg
   build-his:
     cmds:
       - go build -ldflags="-s -w -X main.version={{.VERSION}}" -o {{.OUTPUT_DIR}}/afxw-his.exe ./cmd/afxw-his
@@ -34,6 +35,9 @@ tasks:
   build-wt:
     cmds:
       - go build -ldflags="-s -w -X main.version={{.VERSION}}" -o {{.OUTPUT_DIR}}/afxw-wt.exe ./cmd/afxw-wt
+  build-rg:
+    cmds:
+      - go build -ldflags="-s -w -X main.version={{.VERSION}}" -o {{.OUTPUT_DIR}}/afxw-rg.exe ./cmd/afxw-rg
   lint:
     cmds:
       - golangci-lint run ./...

@@ -33,6 +33,7 @@ func DefaultConfig() *Config {
 			{Name: "ブックマークを追加", Description: "現在のディレクトリをブックマークに追加", Command: "afxw-bm.exe", Args: []string{"-a", ""}},
 			openMenuItem(),
 			windowsTerminalMenuItem(),
+			ripgrepMenuItem(),
 		},
 		Settings: Settings{ToolDir: ""},
 	}
@@ -79,4 +80,9 @@ func openMenuItem() MenuItem {
 // windowsTerminalMenuItem は「Windows Terminalで開く」の標準メニュー項目を返します。
 func windowsTerminalMenuItem() MenuItem {
 	return MenuItem{Name: "Windows Terminalで開く", Description: "現在のフォルダをWindows Terminalで開く", Command: "afxw-wt.exe", Args: []string{}}
+}
+
+// ripgrepMenuItem は「キーワード検索」の標準メニュー項目を返します。
+func ripgrepMenuItem() MenuItem {
+	return MenuItem{Name: "キーワード検索", Description: "現在のフォルダ以下をripgrepで検索", Command: "afxw-rg.exe", Args: []string{}}
 }
