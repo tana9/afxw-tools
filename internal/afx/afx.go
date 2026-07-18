@@ -10,8 +10,9 @@ import (
 )
 
 const (
-	WindowLeft  = 0
-	WindowRight = 1
+	WindowLeft       = 0
+	WindowRight      = 1
+	markedFilesMacro = "$JU$MF"
 )
 
 // AFX は afxw.obj と対話するためのインターフェースです。
@@ -21,7 +22,7 @@ type AFX interface {
 	EXCDFile(path string) error
 	GetActivePath() (string, error)
 	GetCurrentFile() (string, error)
-	// マークなし時はカーソルファイルを返す。パスにスペースを含む場合は正しく動作しない。
+	// マークなし時はカーソルファイルを返す。
 	GetMarkedFiles() ([]string, error)
 	Close()
 }
@@ -167,8 +168,8 @@ func (a *oleAFX) GetCurrentFile() (string, error) {
 }
 
 func (a *oleAFX) GetMarkedFiles() ([]string, error) {
-	// $MFP はスペース区切りで返されるため、パスにスペースが含まれる場合は正しく動作しない
-	result, err := a.extract("$MFP")
+	// $JU はマーク項目の区切りを改行にするため、空白を含むパスも安全に分離できる。
+	result, err := a.extract(markedFilesMacro)
 	if err != nil {
 		return nil, err
 	}
@@ -184,7 +185,16 @@ func parseMarkedFiles(result string, getCurrentFile func() (string, error)) ([]s
 		}
 		return []string{f}, nil
 	}
-	return strings.Fields(result), nil
+	lines := strings.Split(strings.ReplaceAll(result, "\r\n", "\n"), "\n")
+	files := make([]string, 0, len(lines))
+	for _, line := range lines {
+		path := strings.TrimSpace(line)
+		path = strings.Trim(path, "\"")
+		if path != "" {
+			files = append(files, path)
+		}
+	}
+	return files, nil
 }
 
 func (a *oleAFX) extract(variable string) (string, error) {

@@ -68,11 +68,11 @@ func TestToInt(t *testing.T) {
 
 func TestParseMarkedFiles(t *testing.T) {
 	t.Run("marked files", func(t *testing.T) {
-		got, err := parseMarkedFiles("C:\\a.txt C:\\b.txt", nil)
+		got, err := parseMarkedFiles("\"C:\\a file.txt\"\r\n\"C:\\folder b\"", nil)
 		if err != nil {
 			t.Fatalf("unexpected error: %v", err)
 		}
-		want := []string{`C:\a.txt`, `C:\b.txt`}
+		want := []string{`C:\a file.txt`, `C:\folder b`}
 		if !reflect.DeepEqual(got, want) {
 			t.Errorf("got %v, want %v", got, want)
 		}
@@ -98,4 +98,10 @@ func TestParseMarkedFiles(t *testing.T) {
 			t.Errorf("unexpected error: %v", err)
 		}
 	})
+}
+
+func TestMarkedFilesMacroDoesNotAppendPaneLiteral(t *testing.T) {
+	if markedFilesMacro != "$JU$MF" {
+		t.Fatalf("markedFilesMacro = %q", markedFilesMacro)
+	}
 }

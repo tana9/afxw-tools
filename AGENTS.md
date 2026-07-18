@@ -2,17 +2,17 @@
 
 ## Project Structure & Module Organization
 
-This repository contains Windows utilities for integrating with the Afxw file manager. Each executable has its own package under `cmd/`: `afxw-launcher`, `afxw-his`, `afxw-bm`, `afxw-zox`, `afxw-open`, `afxw-wt`, and `afxw-rg`. Keep command-specific code and tests beside the relevant `main.go`. Reusable packages belong in `internal/`, including Afxw OLE access, configuration, command, finder, and slice helpers. Build output goes to the ignored `bin/` directory; release artifacts use `dist/`. CI and release workflows are in `.github/workflows/`.
+This repository contains Windows utilities for integrating with the Afxw file manager. Each executable has its own package under `cmd/`: `afxw-launcher`, `afxw-his`, `afxw-bm`, `afxw-zox`, `afxw-open`, `afxw-wt`, `afxw-rg`, and `afxw-diff`. Keep command-specific code and tests beside the relevant `main.go`. Reusable packages belong in `internal/`, including Afxw OLE access, configuration, command, finder, and slice helpers. Build output goes to the ignored `bin/` directory; release artifacts use `dist/`. CI and release workflows are in `.github/workflows/`.
 
 ## Build, Test, and Development Commands
 
 Use [Task](https://taskfile.dev/) from the repository root:
 
-- `task build` builds all seven Windows executables into `bin/`.
-- `task build-launcher` (or `build-his`, `build-bm`, `build-zox`, `build-open`, `build-wt`, `build-rg`) builds one command.
+- `task build` builds all eight Windows executables into `bin/`.
+- `task build-launcher` (or `build-his`, `build-bm`, `build-zox`, `build-open`, `build-wt`, `build-rg`, `build-diff`) builds one command.
 - `task test` runs `go test ./...`.
 - `task integration-test` includes tests guarded by the `integration` build tag; some exercise interactive or Windows-specific behavior.
-- `task e2e-test` builds and exercises all seven executables on Windows without requiring Afxw.
+- `task e2e-test` builds and exercises all eight executables on Windows without requiring Afxw.
 - `task lint` runs `golangci-lint run ./...`.
 
 Run `go test ./internal/configutil` or another package path for a focused test cycle. The module requires Go 1.26 with the toolchain version declared in `go.mod`.

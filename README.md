@@ -13,6 +13,7 @@
 | [afxw-open](#afxw-open) | カーソル上のファイルをプログラム選択して開く |
 | [afxw-wt](#afxw-wt) | アクティブなペインのフォルダをWindows Terminalで開く |
 | [afxw-rg](#afxw-rg) | 現在のフォルダ以下をripgrepでキーワード検索 |
+| [afxw-diff](#afxw-diff) | マークした2項目をWinMergeで比較 |
 
 すべてのツールはあふwが起動中の状態で使用します（OLE経由であふwと連携します）。
 
@@ -107,6 +108,12 @@ description = "現在のフォルダ以下をripgrepで検索"
 command = "afxw-rg.exe"
 args = []
 
+[[menu]]
+name = "WinMergeで比較"
+description = "マークした2項目をWinMergeで比較"
+command = "afxw-diff.exe"
+args = []
+
 [settings]
 tool_dir = ""  # ツールの検索パス（省略時は実行ファイルと同じディレクトリ）
 ```
@@ -119,8 +126,6 @@ tool_dir = ""  # ツールの検索パス（省略時は実行ファイルと同
 |-----------------|---------|
 | `{file}` | アクティブウィンドウのカーソル位置のファイルのフルパス |
 | `{files}` | マーク済みファイルのフルパス一覧（マークなしの場合はカーソルファイル）。1引数が複数引数に展開される |
-
-> **注意:** `{files}` はスペース区切りで取得するため、パスにスペースが含まれる場合は正しく動作しないことがあります。
 
 ---
 
@@ -184,8 +189,8 @@ afxw-zox.exe --import-history
 # カーソル上のファイルを開く（あふwのマクロから: $F = カーソルファイルのフルパス）
 afxw-open.exe "$F"
 
-# マーク済みファイルをまとめて開く（$MFP = マーク済みファイルのフルパス一覧）
-afxw-open.exe $MFP
+# マーク済みファイルをまとめて開く（$MF = マーク済みファイルのフルパス一覧）
+afxw-open.exe $MF
 ```
 
 afxw-launcherから呼び出す場合は `args = ["{files}"]` を設定します（[上記参照](#afxw-launcher)）。
@@ -216,7 +221,7 @@ args = ["x", "-y"]
 
 ### afxw-rg
 
-あふwのアクティブなペインのフォルダ以下を [ripgrep](https://github.com/BurntSushi/ripgrep) で検索し、結果をfuzzy finderから選んで該当ファイルのフォルダへ移動します。
+あふwのアクティブなペインのフォルダ以下を [ripgrep](https://github.com/BurntSushi/ripgrep) で検索し、結果をfuzzy finderから選んで該当ファイルにカーソルを移動します。
 
 **前提:** `rg.exe` が実行ファイルと同じフォルダまたはPATHにあること。
 
@@ -235,6 +240,24 @@ afxw-rg.exe --encoding sjis "検索文字列"
 ```
 
 `--encoding auto`（既定）では、検索対象をUTF-8・UTF-8 BOMとShift_JISへ分類して検索結果を統合します。`utf-8`、`utf-8bom`、`sjis`（`shift_jis`も可）を指定すると文字コードを限定できます。
+
+---
+
+### afxw-diff
+
+あふwのアクティブなペインでマークした2つのファイルまたはフォルダを [WinMerge](https://winmerge.org/) で比較します。空白や日本語を含むパスにも対応します。
+
+**前提:** WinMergeがインストールされていること。`WinMergeU.exe` をPATH、ユーザーの標準インストール先、`Program Files`、`Program Files (x86)` の順に探します。
+
+```bash
+# あふwで2項目をマークして比較
+afxw-diff.exe
+
+# パスを直接指定して比較
+afxw-diff.exe "C:\path\before" "C:\path\after"
+```
+
+選択数が2つでない場合はWinMergeを起動せず、現在の選択数を案内します。ランチャーの新規設定と既存ユーザー設定には標準メニューとして追加されます。
 
 ---
 
@@ -277,6 +300,7 @@ task build-zox
 task build-open
 task build-wt
 task build-rg
+task build-diff
 ```
 
 ## テスト

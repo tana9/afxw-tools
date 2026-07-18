@@ -34,6 +34,7 @@ func DefaultConfig() *Config {
 			openMenuItem(),
 			windowsTerminalMenuItem(),
 			ripgrepMenuItem(),
+			winMergeMenuItem(),
 		},
 		Settings: Settings{ToolDir: ""},
 	}
@@ -85,4 +86,9 @@ func windowsTerminalMenuItem() MenuItem {
 // ripgrepMenuItem は「キーワード検索」の標準メニュー項目を返します。
 func ripgrepMenuItem() MenuItem {
 	return MenuItem{Name: "キーワード検索", Description: "現在のフォルダ以下をripgrepで検索", Command: "afxw-rg.exe", Args: []string{}}
+}
+
+// winMergeMenuItem は「WinMergeで比較」の標準メニュー項目を返します。
+func winMergeMenuItem() MenuItem {
+	return MenuItem{Name: "WinMergeで比較", Description: "マークした2項目をWinMergeで比較", Command: "afxw-diff.exe", Args: []string{}}
 }
