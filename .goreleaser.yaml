@@ -78,6 +78,18 @@ builds:
     ldflags:
       - -s -w -X main.version={{.Version}}
 
+  - id: afxw-rg
+    main: ./cmd/afxw-rg
+    binary: afxw-rg
+    env:
+      - CGO_ENABLED=0
+    goos:
+      - windows
+    goarch:
+      - amd64
+    ldflags:
+      - -s -w -X main.version={{.Version}}
+
 archives:
   - formats: [zip]
     name_template: "{{ .ProjectName }}_{{ .Version }}_{{ .Os }}_{{ .Arch }}"

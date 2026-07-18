@@ -6,8 +6,10 @@ import "github.com/tana9/afxw-tools/internal/afx"
 type MockAFX struct {
 	HistoriesResult   []string
 	ExcdPath          string
+	ExcdFilePath      string
 	HistoriesErr      error
 	ExcdErr           error
+	ExcdFileErr       error
 	CurrentFileResult string
 	CurrentFileErr    error
 	MarkedFilesResult []string
@@ -42,6 +44,14 @@ func (m *MockAFX) EXCD(path string) error {
 		return m.ExcdErr
 	}
 	m.ExcdPath = path
+	return nil
+}
+
+func (m *MockAFX) EXCDFile(path string) error {
+	if m.ExcdFileErr != nil {
+		return m.ExcdFileErr
+	}
+	m.ExcdFilePath = path
 	return nil
 }
 

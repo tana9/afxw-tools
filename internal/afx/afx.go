@@ -18,6 +18,7 @@ const (
 type AFX interface {
 	Histories(wins []int) ([]string, error)
 	EXCD(path string) error
+	EXCDFile(path string) error
 	GetActivePath() (string, error)
 	GetCurrentFile() (string, error)
 	// マークなし時はカーソルファイルを返す。パスにスペースを含む場合は正しく動作しない。
@@ -131,7 +132,16 @@ func toInt(v any) (int, error) {
 
 func (a *oleAFX) EXCD(path string) error {
 	normalizedPath := ensureTrailingBackslash(path)
-	_, err := oleutil.CallMethod(a.afxw, "Exec", fmt.Sprintf("&EXCD -P\"%s\"", normalizedPath))
+	return a.execEXCD(normalizedPath)
+}
+
+// EXCDFile は対象ファイルのフォルダへ移動し、そのファイルにカーソルを合わせます。
+func (a *oleAFX) EXCDFile(path string) error {
+	return a.execEXCD(path)
+}
+
+func (a *oleAFX) execEXCD(path string) error {
+	_, err := oleutil.CallMethod(a.afxw, "Exec", fmt.Sprintf("&EXCD -P\"%s\"", path))
 	if err != nil {
 		return fmt.Errorf("EXCD呼び出しに失敗しました: %w", err)
 	}

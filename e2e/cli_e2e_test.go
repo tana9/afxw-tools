@@ -22,6 +22,7 @@ var commands = []string{
 	"afxw-launcher",
 	"afxw-open",
 	"afxw-wt",
+	"afxw-rg",
 }
 
 func TestCLI(t *testing.T) {

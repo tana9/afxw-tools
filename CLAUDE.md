@@ -6,7 +6,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 - Go **1.26** is required (declared in `go.mod`); this is a Windows-focused project (uses `go-ole`, `golang.org/x/sys/windows`) and only builds/runs correctly on Windows.
 - Build every executable into `bin/`: `task build`
-- Build one executable: `task build-his`, `task build-bm`, `task build-zox`, `task build-launcher`, `task build-open`, or `task build-wt`
+- Build one executable: `task build-his`, `task build-bm`, `task build-zox`, `task build-launcher`, `task build-open`, `task build-wt`, or `task build-rg`
 - Run all unit tests: `task test` (equivalent to `go test ./...`)
 - Run integration tests, which can open an interactive fuzzy finder: `task integration-test` (equivalent to `go test -tags=integration ./...`)
 - Run one test or package directly with Go, for example:
@@ -18,7 +18,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ## Architecture
 
-This module builds six independent Windows executables under `cmd/`: `afxw-launcher`, `afxw-his`, `afxw-bm`, `afxw-zox`, `afxw-open`, and `afxw-wt`. All of them interoperate with a running instance of あふw (afxw), a Windows file manager, via OLE/COM. The launcher is a Bubble Tea TUI menu that resolves configured commands and runs each selected executable as a child process; the other binaries can also be invoked directly (e.g. wired up as あふw macro/external-program keys).
+This module builds seven independent Windows executables under `cmd/`: `afxw-launcher`, `afxw-his`, `afxw-bm`, `afxw-zox`, `afxw-open`, `afxw-wt`, and `afxw-rg`. All of them interoperate with a running instance of あふw (afxw), a Windows file manager, via OLE/COM. The launcher is a Bubble Tea TUI menu that resolves configured commands and runs each selected executable as a child process; the other binaries can also be invoked directly (e.g. wired up as あふw macro/external-program keys).
 
 `internal/afx` is the boundary to the running あふw instance. `NewOleAFX` creates the `afxw.obj` COM object, locks the OS thread, and returns the `afx.AFX` interface for reading folder histories, changing directory (`EXCD`), and reading the active/cursor/marked files. `Close` must always be deferred right after a successful `NewOleAFX` call so COM is uninitialized and the OS thread is unlocked. COM `VARIANT` integer return values (e.g. `HisDirCount`) are converted through the local `toInt` helper rather than a direct type assertion, since あふw may return different integer subtypes.
 

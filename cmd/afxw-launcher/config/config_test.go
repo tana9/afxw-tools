@@ -11,8 +11,8 @@ import (
 func TestDefaultConfig(t *testing.T) {
 	cfg := DefaultConfig()
 
-	if len(cfg.Menu) != 6 {
-		t.Errorf("expected 6 menu items, got %d", len(cfg.Menu))
+	if len(cfg.Menu) != 7 {
+		t.Errorf("expected 7 menu items, got %d", len(cfg.Menu))
 	}
 
 	if cfg.Menu[0].Name != "フォルダ履歴から選択" {
@@ -34,6 +34,10 @@ func TestDefaultConfig(t *testing.T) {
 	if wt.Command != "afxw-wt.exe" || len(wt.Args) != 0 {
 		t.Errorf("unexpected Windows Terminal menu: %+v", wt)
 	}
+	rg := cfg.Menu[6]
+	if rg.Command != "afxw-rg.exe" || len(rg.Args) != 0 {
+		t.Errorf("unexpected ripgrep menu: %+v", rg)
+	}
 }
 
 func TestLoad_CreatesDefaultConfig(t *testing.T) {
@@ -44,8 +48,8 @@ func TestLoad_CreatesDefaultConfig(t *testing.T) {
 	if err != nil {
 		t.Fatalf("unexpected error: %v", err)
 	}
-	if len(cfg.Menu) != 6 {
-		t.Errorf("expected 6 menu items, got %d", len(cfg.Menu))
+	if len(cfg.Menu) != 7 {
+		t.Errorf("expected 7 menu items, got %d", len(cfg.Menu))
 	}
 	if _, err := os.Stat(configPath); err != nil {
 		t.Errorf("expected default config to be created: %v", err)
@@ -70,8 +74,8 @@ args = []
 	if err != nil {
 		t.Fatalf("unexpected error: %v", err)
 	}
-	if len(cfg.Menu) != 3 {
-		t.Fatalf("expected 3 menu items, got %d", len(cfg.Menu))
+	if len(cfg.Menu) != 4 {
+		t.Fatalf("expected 4 menu items, got %d", len(cfg.Menu))
 	}
 	if cfg.Menu[1].Command != "afxw-open.exe" {
 		t.Errorf("expected open command, got %q", cfg.Menu[1].Command)
@@ -79,12 +83,15 @@ args = []
 	if cfg.Menu[2].Command != "afxw-wt.exe" {
 		t.Errorf("expected Windows Terminal command, got %q", cfg.Menu[2].Command)
 	}
+	if cfg.Menu[3].Command != "afxw-rg.exe" {
+		t.Errorf("expected ripgrep command, got %q", cfg.Menu[3].Command)
+	}
 
 	persisted, err := LoadFrom(configPath)
 	if err != nil {
 		t.Fatal(err)
 	}
-	if len(persisted.Menu) != 3 {
+	if len(persisted.Menu) != 4 {
 		t.Errorf("expected migrated config to be persisted, got %d items", len(persisted.Menu))
 	}
 	content, err := os.ReadFile(configPath)
@@ -131,6 +138,11 @@ args = ["{files}"]
 name = "Terminal"
 command = "tools/afxw-wt.exe"
 args = []
+
+[[menu]]
+name = "Search"
+command = "AFXW-RG.EXE"
+args = []
 `
 	if err := os.WriteFile(configPath, []byte(content), 0644); err != nil {
 		t.Fatal(err)
@@ -140,7 +152,7 @@ args = []
 	if err != nil {
 		t.Fatal(err)
 	}
-	if len(cfg.Menu) != 2 {
+	if len(cfg.Menu) != 3 {
 		t.Fatalf("expected standard menus not to be duplicated, got %d items", len(cfg.Menu))
 	}
 }
@@ -154,6 +166,11 @@ func TestLoad_MigratesOnlyMissingWindowsTerminalMenu(t *testing.T) {
 name = "ファイルを開く"
 command = "afxw-open.exe"
 args = ["{files}"]
+
+[[menu]]
+name = "キーワード検索"
+command = "afxw-rg.exe"
+args = []
 `
 	if err := os.WriteFile(configPath, []byte(content), 0644); err != nil {
 		t.Fatal(err)
@@ -163,10 +180,10 @@ args = ["{files}"]
 	if err != nil {
 		t.Fatal(err)
 	}
-	if len(cfg.Menu) != 2 {
+	if len(cfg.Menu) != 3 {
 		t.Fatalf("expected only the missing menu to be added, got %d items", len(cfg.Menu))
 	}
-	if cfg.Menu[0].Command != "afxw-open.exe" || cfg.Menu[1].Command != "afxw-wt.exe" {
+	if cfg.Menu[0].Command != "afxw-open.exe" || cfg.Menu[1].Command != "afxw-rg.exe" || cfg.Menu[2].Command != "afxw-wt.exe" {
 		t.Fatalf("unexpected migrated menus: %+v", cfg.Menu)
 	}
 
@@ -174,7 +191,7 @@ args = ["{files}"]
 	if err != nil {
 		t.Fatal(err)
 	}
-	if len(persisted.Menu) != 2 || persisted.Menu[1].Command != "afxw-wt.exe" {
+	if len(persisted.Menu) != 3 || persisted.Menu[2].Command != "afxw-wt.exe" {
 		t.Fatalf("migration was not persisted: %+v", persisted.Menu)
 	}
 	persistedContent, err := os.ReadFile(configPath)
