@@ -33,20 +33,20 @@ func Run(cmd *cli.Command) {
 }
 
 func reportNotice(message string, stdin io.Reader, stdout io.Writer, interactive bool) {
-	fmt.Fprintln(stdout, message)
+	_, _ = fmt.Fprintln(stdout, message)
 	if !interactive {
 		return
 	}
-	fmt.Fprintln(stdout, "Enterキーを押すと終了します...")
+	_, _ = fmt.Fprintln(stdout, "Enterキーを押すと終了します...")
 	_, _ = fmt.Fscanln(stdin)
 }
 
 func reportError(err error, stdin io.Reader, stderr io.Writer, interactive bool) {
-	fmt.Fprintf(stderr, "エラー: %v\n", err)
+	_, _ = fmt.Fprintf(stderr, "エラー: %v\n", err)
 	if !interactive {
 		return
 	}
 
-	fmt.Fprintln(stderr, "何かキーを押すと終了します...")
+	_, _ = fmt.Fprintln(stderr, "何かキーを押すと終了します...")
 	_, _ = fmt.Fscanln(stdin)
 }
