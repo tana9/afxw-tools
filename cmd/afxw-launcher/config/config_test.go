@@ -11,8 +11,8 @@ import (
 func TestDefaultConfig(t *testing.T) {
 	cfg := DefaultConfig()
 
-	if len(cfg.Menu) != 5 {
-		t.Errorf("expected 5 menu items, got %d", len(cfg.Menu))
+	if len(cfg.Menu) != 6 {
+		t.Errorf("expected 6 menu items, got %d", len(cfg.Menu))
 	}
 
 	if cfg.Menu[0].Name != "フォルダ履歴から選択" {
@@ -30,6 +30,10 @@ func TestDefaultConfig(t *testing.T) {
 	if len(open.Args) != 1 || open.Args[0] != "{files}" {
 		t.Errorf("unexpected open args: %v", open.Args)
 	}
+	wt := cfg.Menu[5]
+	if wt.Command != "afxw-wt.exe" || len(wt.Args) != 0 {
+		t.Errorf("unexpected Windows Terminal menu: %+v", wt)
+	}
 }
 
 func TestLoad_CreatesDefaultConfig(t *testing.T) {
@@ -40,8 +44,8 @@ func TestLoad_CreatesDefaultConfig(t *testing.T) {
 	if err != nil {
 		t.Fatalf("unexpected error: %v", err)
 	}
-	if len(cfg.Menu) != 5 {
-		t.Errorf("expected 5 menu items, got %d", len(cfg.Menu))
+	if len(cfg.Menu) != 6 {
+		t.Errorf("expected 6 menu items, got %d", len(cfg.Menu))
 	}
 	if _, err := os.Stat(configPath); err != nil {
 		t.Errorf("expected default config to be created: %v", err)
@@ -66,18 +70,21 @@ args = []
 	if err != nil {
 		t.Fatalf("unexpected error: %v", err)
 	}
-	if len(cfg.Menu) != 2 {
-		t.Fatalf("expected 2 menu items, got %d", len(cfg.Menu))
+	if len(cfg.Menu) != 3 {
+		t.Fatalf("expected 3 menu items, got %d", len(cfg.Menu))
 	}
 	if cfg.Menu[1].Command != "afxw-open.exe" {
 		t.Errorf("expected open command, got %q", cfg.Menu[1].Command)
+	}
+	if cfg.Menu[2].Command != "afxw-wt.exe" {
+		t.Errorf("expected Windows Terminal command, got %q", cfg.Menu[2].Command)
 	}
 
 	persisted, err := LoadFrom(configPath)
 	if err != nil {
 		t.Fatal(err)
 	}
-	if len(persisted.Menu) != 2 {
+	if len(persisted.Menu) != 3 {
 		t.Errorf("expected migrated config to be persisted, got %d items", len(persisted.Menu))
 	}
 	content, err := os.ReadFile(configPath)
@@ -108,6 +115,33 @@ args = []
 	}
 	if len(cfg.Menu) != 1 || cfg.Menu[0].Command != "custom.exe" {
 		t.Errorf("unexpected local config: %+v", cfg.Menu)
+	}
+}
+
+func TestLoad_DoesNotDuplicateStandardMenus(t *testing.T) {
+	configPath := filepath.Join(t.TempDir(), "config.toml")
+	localPath := filepath.Join(t.TempDir(), "local-config.toml")
+	content := `
+[[menu]]
+name = "ファイルを開く"
+command = "AFXW-OPEN.EXE"
+args = ["{files}"]
+
+[[menu]]
+name = "Terminal"
+command = "tools/afxw-wt.exe"
+args = []
+`
+	if err := os.WriteFile(configPath, []byte(content), 0644); err != nil {
+		t.Fatal(err)
+	}
+
+	cfg, err := load(configPath, localPath)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(cfg.Menu) != 2 {
+		t.Fatalf("expected standard menus not to be duplicated, got %d items", len(cfg.Menu))
 	}
 }
 

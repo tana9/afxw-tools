@@ -2,14 +2,14 @@
 
 ## Project Structure & Module Organization
 
-This repository contains Windows utilities for integrating with the Afxw file manager. Each executable has its own package under `cmd/`: `afxw-launcher`, `afxw-his`, `afxw-bm`, `afxw-zox`, and `afxw-open`. Keep command-specific code and tests beside the relevant `main.go`. Reusable packages belong in `internal/`, including Afxw OLE access, configuration, command, finder, and slice helpers. Build output goes to the ignored `bin/` directory; release artifacts use `dist/`. CI and release workflows are in `.github/workflows/`.
+This repository contains Windows utilities for integrating with the Afxw file manager. Each executable has its own package under `cmd/`: `afxw-launcher`, `afxw-his`, `afxw-bm`, `afxw-zox`, `afxw-open`, and `afxw-wt`. Keep command-specific code and tests beside the relevant `main.go`. Reusable packages belong in `internal/`, including Afxw OLE access, configuration, command, finder, and slice helpers. Build output goes to the ignored `bin/` directory; release artifacts use `dist/`. CI and release workflows are in `.github/workflows/`.
 
 ## Build, Test, and Development Commands
 
 Use [Task](https://taskfile.dev/) from the repository root:
 
-- `task build` builds all five Windows executables into `bin/`.
-- `task build-launcher` (or `build-his`, `build-bm`, `build-zox`, `build-open`) builds one command.
+- `task build` builds all six Windows executables into `bin/`.
+- `task build-launcher` (or `build-his`, `build-bm`, `build-zox`, `build-open`, `build-wt`) builds one command.
 - `task test` runs `go test ./...`.
 - `task integration-test` includes tests guarded by the `integration` build tag; some exercise interactive or Windows-specific behavior.
 - `task e2e-test` builds and exercises all six executables on Windows without requiring Afxw.

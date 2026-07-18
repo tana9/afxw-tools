@@ -32,6 +32,7 @@ func DefaultConfig() *Config {
 			{Name: "ブックマークから選択", Description: "ブックマークから選択して移動", Command: "afxw-bm.exe", Args: []string{}},
 			{Name: "ブックマークを追加", Description: "現在のディレクトリをブックマークに追加", Command: "afxw-bm.exe", Args: []string{"-a", ""}},
 			openMenuItem(),
+			windowsTerminalMenuItem(),
 		},
 		Settings: Settings{ToolDir: ""},
 	}
@@ -73,4 +74,9 @@ func (c *Config) FindCommand(command string) (string, error) {
 // DefaultConfigと既存ユーザー設定への移行処理の両方から参照するため、メニュー順に依存しない独立した関数にしています。
 func openMenuItem() MenuItem {
 	return MenuItem{Name: "ファイルを開く", Description: "選択したファイルをプログラムで開く", Command: "afxw-open.exe", Args: []string{"{files}"}}
+}
+
+// windowsTerminalMenuItem は「Windows Terminalで開く」の標準メニュー項目を返します。
+func windowsTerminalMenuItem() MenuItem {
+	return MenuItem{Name: "Windows Terminalで開く", Description: "現在のフォルダをWindows Terminalで開く", Command: "afxw-wt.exe", Args: []string{}}
 }
