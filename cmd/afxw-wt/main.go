@@ -38,13 +38,14 @@ func main() {
 	cliutil.Run(cmd)
 }
 
-// run は指定フォルダを開始ディレクトリとしてWindows Terminalを非同期起動します。
+// run は直近のWindows Terminalウィンドウに、指定フォルダを開始ディレクトリとするタブを非同期で開きます。
+// 既存のウィンドウがない場合は新しいウィンドウが作成されます。
 func run(dir string, wtPath string, start func(string, []string) error) error {
 	if dir == "" {
 		return fmt.Errorf("アクティブパスが取得できませんでした")
 	}
 
-	if err := start(wtPath, []string{"-d", dir}); err != nil {
+	if err := start(wtPath, []string{"-w", "0", "-d", dir}); err != nil {
 		return fmt.Errorf("wt.exeの起動に失敗しました: %w", err)
 	}
 

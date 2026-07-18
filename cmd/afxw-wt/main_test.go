@@ -21,8 +21,15 @@ func TestRun_Normal(t *testing.T) {
 	if gotPath != "wt.exe" {
 		t.Errorf("期待: wt.exe, 取得: %s", gotPath)
 	}
-	if len(gotArgs) != 2 || gotArgs[0] != "-d" || gotArgs[1] != `C:\Users\Test\` {
+	wantArgs := []string{"-w", "0", "-d", `C:\Users\Test\`}
+	if len(gotArgs) != len(wantArgs) {
 		t.Errorf("予期しない引数: %v", gotArgs)
+	} else {
+		for i := range wantArgs {
+			if gotArgs[i] != wantArgs[i] {
+				t.Errorf("引数[%d]: 期待 %q, 取得 %q", i, wantArgs[i], gotArgs[i])
+			}
+		}
 	}
 }
 
