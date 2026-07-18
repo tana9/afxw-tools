@@ -55,13 +55,14 @@ func load(userConfigPath, localConfigPath string) (*Config, error) {
 }
 
 func migrateUserConfig(path string, cfg *Config) (*Config, error) {
-	if !addOpenMenuItem(cfg) {
+	items := addMissingStandardMenuItems(cfg)
+	if len(items) == 0 {
 		return cfg, nil
 	}
-	if err := appendOpenMenuItem(path); err != nil {
+	if err := appendMenuItems(path, items); err != nil {
 		return nil, fmt.Errorf("設定ファイルの更新に失敗しました: %w", err)
 	}
-	fmt.Fprintf(os.Stderr, "設定ファイルに「ファイルを開く」メニューを追加しました: %s\n", path)
+	_, _ = fmt.Fprintf(os.Stderr, "設定ファイルに不足していた標準メニューを追加しました: %s\n", path)
 	return cfg, nil
 }
 
@@ -75,19 +76,27 @@ func createDefaultConfig(path string) *Config {
 	return cfg
 }
 
-func addOpenMenuItem(cfg *Config) bool {
-	for _, item := range cfg.Menu {
-		if strings.EqualFold(filepath.Base(item.Command), "afxw-open.exe") {
-			return false
+func addMissingStandardMenuItems(cfg *Config) []MenuItem {
+	standardItems := []MenuItem{openMenuItem(), windowsTerminalMenuItem()}
+	missing := make([]MenuItem, 0, len(standardItems))
+	for _, standard := range standardItems {
+		found := false
+		for _, item := range cfg.Menu {
+			if strings.EqualFold(filepath.Base(item.Command), standard.Command) {
+				found = true
+				break
+			}
+		}
+		if !found {
+			cfg.Menu = append(cfg.Menu, standard)
+			missing = append(missing, standard)
 		}
 	}
-	cfg.Menu = append(cfg.Menu, openMenuItem())
-	return true
+	return missing
 }
 
-func appendOpenMenuItem(path string) error {
-	openMenu := openMenuItem()
+func appendMenuItems(path string, items []MenuItem) error {
 	return configutil.Append(path, struct {
 		Menu []MenuItem `toml:"menu"`
-	}{Menu: []MenuItem{openMenu}})
+	}{Menu: items})
 }
