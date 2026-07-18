@@ -73,4 +73,44 @@ func TestUpdate_ArrowKeys(t *testing.T) {
 	if m.cursor != 0 {
 		t.Errorf("k キー後の cursor: 期待=0, 取得=%d", m.cursor)
 	}
+
+	// 先頭から上に移動すると末尾へ循環
+	result, _ = m.Update(tea.KeyMsg{Type: tea.KeyRunes, Runes: []rune("k")})
+	m = result.(model)
+	if m.cursor != 2 {
+		t.Errorf("先頭での k キー後の cursor: 期待=2, 取得=%d", m.cursor)
+	}
+
+	// 末尾から下に移動すると先頭へ循環
+	result, _ = m.Update(tea.KeyMsg{Type: tea.KeyRunes, Runes: []rune("j")})
+	m = result.(model)
+	if m.cursor != 0 {
+		t.Errorf("末尾での j キー後の cursor: 期待=0, 取得=%d", m.cursor)
+	}
+}
+
+func TestUpdate_ArrowKeysWithEmptyMenu(t *testing.T) {
+	m := model{cfg: &config.Config{}}
+	for _, key := range []string{"j", "k"} {
+		result, _ := m.Update(tea.KeyMsg{Type: tea.KeyRunes, Runes: []rune(key)})
+		m = result.(model)
+		if m.cursor != 0 {
+			t.Errorf("空メニューで %s キー後の cursor: 期待=0, 取得=%d", key, m.cursor)
+		}
+	}
+}
+
+func TestUpdate_ArrowKeyAliasesWrap(t *testing.T) {
+	m := newTestModel()
+	result, _ := m.Update(tea.KeyMsg{Type: tea.KeyUp})
+	m = result.(model)
+	if m.cursor != 2 {
+		t.Errorf("先頭での上キー後の cursor: 期待=2, 取得=%d", m.cursor)
+	}
+
+	result, _ = m.Update(tea.KeyMsg{Type: tea.KeyDown})
+	m = result.(model)
+	if m.cursor != 0 {
+		t.Errorf("末尾での下キー後の cursor: 期待=0, 取得=%d", m.cursor)
+	}
 }

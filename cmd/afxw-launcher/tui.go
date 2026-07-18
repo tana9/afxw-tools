@@ -52,13 +52,13 @@ func (m model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			return m, tea.Quit
 
 		case "up", "k":
-			if m.cursor > 0 {
-				m.cursor--
+			if len(m.cfg.Menu) > 0 {
+				m.cursor = (m.cursor - 1 + len(m.cfg.Menu)) % len(m.cfg.Menu)
 			}
 
 		case "down", "j":
-			if m.cursor < len(m.cfg.Menu)-1 {
-				m.cursor++
+			if len(m.cfg.Menu) > 0 {
+				m.cursor = (m.cursor + 1) % len(m.cfg.Menu)
 			}
 
 		case "enter":
