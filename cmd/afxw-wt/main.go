@@ -9,6 +9,7 @@ import (
 
 	"github.com/tana9/afxw-tools/internal/afx"
 	"github.com/tana9/afxw-tools/internal/cliutil"
+	"github.com/tana9/afxw-tools/internal/cmdutil"
 	"github.com/urfave/cli/v3"
 )
 
@@ -55,16 +56,11 @@ func run(dir string, wtPath string, start func(string, []string) error) error {
 // resolveWt はwt.exeのパスを解決します。
 // PATHに無い場合はWindowsAppsの既定エイリアスを確認し、どちらにも無ければ "wt.exe" をそのまま返して実行時にエラーを報告させます。
 func resolveWt() string {
-	if p, err := exec.LookPath("wt.exe"); err == nil {
-		return p
-	}
+	var alias string
 	if localAppData := os.Getenv("LOCALAPPDATA"); localAppData != "" {
-		alias := filepath.Join(localAppData, "Microsoft", "WindowsApps", "wt.exe")
-		if info, err := os.Stat(alias); err == nil && !info.IsDir() {
-			return alias
-		}
+		alias = filepath.Join(localAppData, "Microsoft", "WindowsApps", "wt.exe")
 	}
-	return "wt.exe"
+	return cmdutil.ResolveExecutable("wt.exe", alias)
 }
 
 // startCommand はコマンドを非同期で起動します。終了は待ちません。

@@ -9,6 +9,7 @@ import (
 
 	"github.com/tana9/afxw-tools/internal/afx"
 	"github.com/tana9/afxw-tools/internal/cliutil"
+	"github.com/tana9/afxw-tools/internal/cmdutil"
 	"github.com/tana9/afxw-tools/internal/singleinstance"
 	"github.com/urfave/cli/v3"
 )
@@ -59,21 +60,19 @@ func run(paths []string, winMergePath string, start func(string, []string) error
 
 // resolveWinMerge はPATH、ユーザー、64bit、32bitの標準インストール先の順に探索します。
 func resolveWinMerge() string {
-	if path, err := exec.LookPath("WinMergeU.exe"); err == nil {
-		return path
-	}
+	return cmdutil.ResolveExecutable("WinMergeU.exe",
+		executableIn("LOCALAPPDATA", "Programs", "WinMerge", "WinMergeU.exe"),
+		executableIn("ProgramFiles", "WinMerge", "WinMergeU.exe"),
+		executableIn("ProgramFiles(x86)", "WinMerge", "WinMergeU.exe"),
+	)
+}
 
-	candidates := []string{
-		filepath.Join(os.Getenv("LOCALAPPDATA"), "Programs", "WinMerge", "WinMergeU.exe"),
-		filepath.Join(os.Getenv("ProgramFiles"), "WinMerge", "WinMergeU.exe"),
-		filepath.Join(os.Getenv("ProgramFiles(x86)"), "WinMerge", "WinMergeU.exe"),
+func executableIn(env string, elems ...string) string {
+	root := os.Getenv(env)
+	if root == "" {
+		return ""
 	}
-	for _, candidate := range candidates {
-		if info, err := os.Stat(candidate); err == nil && !info.IsDir() {
-			return candidate
-		}
-	}
-	return "WinMergeU.exe"
+	return filepath.Join(append([]string{root}, elems...)...)
 }
 
 func startCommand(path string, args []string) error {

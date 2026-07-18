@@ -34,6 +34,20 @@ func Find(command string, dirs ...string) (string, error) {
 	return "", fmt.Errorf("コマンドが見つかりません: %s", command)
 }
 
+// ResolveExecutable はPATHと候補パスから実行ファイルを探します。
+// 見つからない場合はcommandをそのまま返し、実行時にエラーを報告させます。
+func ResolveExecutable(command string, candidates ...string) string {
+	if path, err := exec.LookPath(command); err == nil {
+		return path
+	}
+	for _, candidate := range candidates {
+		if candidate != "" && fileExists(candidate) {
+			return candidate
+		}
+	}
+	return command
+}
+
 // ExecDir は実行ファイルのディレクトリを返します。
 func ExecDir() string {
 	exe, err := os.Executable()

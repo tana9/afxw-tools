@@ -26,6 +26,26 @@ func TestFind_AbsolutePath_Exists(t *testing.T) {
 	}
 }
 
+func TestResolveExecutable(t *testing.T) {
+	t.Run("candidate", func(t *testing.T) {
+		t.Setenv("PATH", "")
+		executable := filepath.Join(t.TempDir(), "tool.exe")
+		if err := os.WriteFile(executable, nil, 0644); err != nil {
+			t.Fatal(err)
+		}
+		if got := ResolveExecutable("tool.exe", "", executable); got != executable {
+			t.Fatalf("ResolveExecutable() = %q, want %q", got, executable)
+		}
+	})
+
+	t.Run("fallback", func(t *testing.T) {
+		t.Setenv("PATH", "")
+		if got := ResolveExecutable("missing-tool.exe", "", filepath.Join(t.TempDir(), "missing.exe")); got != "missing-tool.exe" {
+			t.Fatalf("ResolveExecutable() = %q", got)
+		}
+	})
+}
+
 func TestFind_AbsolutePath_NotFound(t *testing.T) {
 	p := filepath.Join(t.TempDir(), "nonexistent.exe")
 	if _, err := Find(p); err == nil {

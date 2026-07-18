@@ -10,6 +10,8 @@ import (
 	"strconv"
 	"strings"
 	"sync"
+
+	"github.com/tana9/afxw-tools/internal/cmdutil"
 )
 
 type Entry struct {
@@ -64,15 +66,7 @@ func ResolveExecutable() string {
 }
 
 func resolveExecutable() string {
-	if path, err := exec.LookPath("zoxide"); err == nil {
-		return path
-	}
-	for _, candidate := range candidateExecutablePaths() {
-		if info, err := os.Stat(candidate); err == nil && !info.IsDir() {
-			return candidate
-		}
-	}
-	return "zoxide"
+	return cmdutil.ResolveExecutable("zoxide", candidateExecutablePaths()...)
 }
 
 // Query はzoxideのクエリを実行してスコア降順のエントリを返します。
