@@ -2,15 +2,14 @@ package main
 
 import (
 	"context"
-	"errors"
 	"fmt"
 
-	"github.com/ktr0731/go-fuzzyfinder"
 	"github.com/tana9/afxw-tools/internal/afx"
 	"github.com/tana9/afxw-tools/internal/cliutil"
 	"github.com/tana9/afxw-tools/internal/finder"
+	"github.com/tana9/afxw-tools/internal/selectnav"
 	"github.com/tana9/afxw-tools/internal/singleinstance"
-	"github.com/tana9/afxw-tools/internal/sliceutil"
+	"github.com/tana9/afxw-tools/internal/stringutil"
 	"github.com/urfave/cli/v3"
 )
 
@@ -34,18 +33,18 @@ func main() {
 				return err
 			}
 
-			client, err := afx.NewOLEClient()
+			a, err := afx.Connect()
 			if err != nil {
-				return fmt.Errorf("afxw.objへの接続に失敗しました: %w", err)
+				return err
 			}
-			defer client.Close()
+			defer a.Close()
 
 			wins, err := parseWindowFlag(cmd.String("window"))
 			if err != nil {
 				return err
 			}
 
-			return run(client, &finder.FuzzyFinder{}, wins)
+			return run(a, &finder.FuzzyFinder{}, wins)
 		},
 	}
 
@@ -65,29 +64,17 @@ func parseWindowFlag(window string) ([]int, error) {
 	}
 }
 
-func run(client afx.Client, f finder.Finder, windows []int) error {
-	dirs, err := client.DirectoryHistories(windows)
+// run はフォルダ履歴から選択してあふwで移動します。履歴が空の場合はNoticeを返します。
+func run(a afx.AFX, f finder.Finder, wins []int) error {
+	dirs, err := a.Histories(wins)
 	if err != nil {
-		return fmt.Errorf("履歴の取得に失敗しました: %w", err)
-	}
-
-	dirs = sliceutil.Unique(dirs)
-
-	if len(dirs) == 0 {
-		return nil
-	}
-
-	idx, err := f.Find(dirs)
-	if err != nil {
-		if errors.Is(err, fuzzyfinder.ErrAbort) {
-			return nil // ESC / Ctrl+C でキャンセル
-		}
 		return err
 	}
 
-	if err := client.ChangeDirectory(dirs[idx]); err != nil {
-		return fmt.Errorf("ディレクトリ移動に失敗しました: %w", err)
+	dirs = stringutil.RemoveDuplicates(dirs)
+	if len(dirs) == 0 {
+		return &cliutil.Notice{Message: "フォルダ履歴が見つかりません。"}
 	}
 
-	return nil
+	return selectnav.SelectAndMove(a, f, dirs)
 }

@@ -11,7 +11,7 @@ import (
 // 相対パスの場合は dirs、実行ファイルと同じディレクトリ、PATH の順で検索します。
 func Find(command string, dirs ...string) (string, error) {
 	if filepath.IsAbs(command) {
-		if _, err := os.Stat(command); err == nil {
+		if fileExists(command) {
 			return command, nil
 		}
 		return "", fmt.Errorf("コマンドが見つかりません: %s", command)
@@ -43,7 +43,8 @@ func ExecDir() string {
 	return filepath.Dir(exe)
 }
 
+// fileExists はパスがディレクトリ以外のファイルとして存在するかを返します。
 func fileExists(path string) bool {
-	_, err := os.Stat(path)
-	return err == nil
+	info, err := os.Stat(path)
+	return err == nil && !info.IsDir()
 }

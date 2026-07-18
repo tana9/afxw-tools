@@ -32,33 +32,26 @@ func Load() (*Config, error) {
 	)
 }
 
+// load はユーザー設定→ローカル設定の順に読み込み、どちらも無ければデフォルト設定を生成します。
+// ユーザー設定が存在する場合のみ、不足メニューの移行(migrateUserConfig)を行います。
 func load(userConfigPath, localConfigPath string) (*Config, error) {
-	cfg, exists, err := loadExistingConfig(userConfigPath)
+	cfg, err := configutil.TryLoad[Config](userConfigPath)
 	if err != nil {
 		return nil, err
 	}
-	if exists {
+	if cfg != nil {
 		return migrateUserConfig(userConfigPath, cfg)
 	}
 
-	cfg, exists, err = loadExistingConfig(localConfigPath)
+	cfg, err = configutil.TryLoad[Config](localConfigPath)
 	if err != nil {
 		return nil, err
 	}
-	if exists {
+	if cfg != nil {
 		return cfg, nil
 	}
 
 	return createDefaultConfig(userConfigPath), nil
-}
-
-func loadExistingConfig(path string) (*Config, bool, error) {
-	exists, err := configutil.Exists(path)
-	if err != nil || !exists {
-		return nil, exists, err
-	}
-	cfg, err := LoadFrom(path)
-	return cfg, true, err
 }
 
 func migrateUserConfig(path string, cfg *Config) (*Config, error) {
@@ -88,12 +81,12 @@ func addOpenMenuItem(cfg *Config) bool {
 			return false
 		}
 	}
-	cfg.Menu = append(cfg.Menu, DefaultConfig().Menu[4])
+	cfg.Menu = append(cfg.Menu, openMenuItem())
 	return true
 }
 
 func appendOpenMenuItem(path string) error {
-	openMenu := DefaultConfig().Menu[4]
+	openMenu := openMenuItem()
 	return configutil.Append(path, struct {
 		Menu []MenuItem `toml:"menu"`
 	}{Menu: []MenuItem{openMenu}})

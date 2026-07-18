@@ -133,3 +133,24 @@ func TestAddConcurrentDuplicate(t *testing.T) {
 		t.Fatalf("got %v, want one %q", dirs, filepath.Clean(item))
 	}
 }
+
+func TestAdd_UnicodeCaseFold(t *testing.T) {
+	path := filepath.Join(t.TempDir(), "bookmarks.txt")
+
+	// U+0130(İ)はstrings.ToLowerでは"i"になるがstrings.EqualFoldでは"i"と一致しない。
+	// LoadのdedupとAddの重複チェックが同じ正規化キー(normKey)を使うことを保証する。
+	if err := Add(path, `C:\Users\Test\Dİr1`); err != nil {
+		t.Fatal(err)
+	}
+	if err := Add(path, `C:\Users\Test\Dir1`); err != nil {
+		t.Fatal(err)
+	}
+
+	dirs, err := Load(path)
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+	if len(dirs) != 1 {
+		t.Errorf("expected 1 item, got %d: %v", len(dirs), dirs)
+	}
+}

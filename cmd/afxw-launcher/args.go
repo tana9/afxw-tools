@@ -13,10 +13,6 @@ import (
 //
 //	1つの引数が複数の引数に展開されます。
 func resolveArgs(args []string) ([]string, error) {
-	return resolveArgsWith(args, afx.NewOLEClient)
-}
-
-func resolveArgsWith(args []string, newClient func() (afx.Client, error)) ([]string, error) {
 	hasFile, hasFiles := false, false
 	for _, arg := range args {
 		if strings.Contains(arg, "{files}") {
@@ -30,22 +26,22 @@ func resolveArgsWith(args []string, newClient func() (afx.Client, error)) ([]str
 		return args, nil
 	}
 
-	client, err := newClient()
+	a, err := afx.Connect()
 	if err != nil {
-		return nil, fmt.Errorf("afxw.objへの接続に失敗しました: %w", err)
+		return nil, err
 	}
-	defer client.Close()
+	defer a.Close()
 
 	var currentFile string
 	if hasFile {
-		if currentFile, err = client.CurrentFile(); err != nil {
+		if currentFile, err = a.GetCurrentFile(); err != nil {
 			return nil, fmt.Errorf("カレントファイルの取得に失敗しました: %w", err)
 		}
 	}
 
 	var markedFiles []string
 	if hasFiles {
-		if markedFiles, err = client.MarkedFiles(); err != nil {
+		if markedFiles, err = a.GetMarkedFiles(); err != nil {
 			return nil, fmt.Errorf("マーク済みファイルの取得に失敗しました: %w", err)
 		}
 	}

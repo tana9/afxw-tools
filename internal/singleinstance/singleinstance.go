@@ -43,7 +43,7 @@ func acquire(name string, timeoutMs uint32) error {
 	// h は既存ミューテックスへのハンドル。取得後もプロセス終了まで保持する（意図的なリーク）
 	event, err := windows.WaitForSingleObject(h, timeoutMs)
 	if err != nil {
-		windows.CloseHandle(h)
+		_ = windows.CloseHandle(h)
 		return fmt.Errorf("ミューテックスの待機に失敗しました: %w", err)
 	}
 	switch event {
@@ -52,10 +52,10 @@ func acquire(name string, timeoutMs uint32) error {
 		_ = h
 		return nil
 	case waitTimeout:
-		windows.CloseHandle(h)
+		_ = windows.CloseHandle(h)
 		return ErrTimeout
 	default:
-		windows.CloseHandle(h)
+		_ = windows.CloseHandle(h)
 		return fmt.Errorf("ミューテックスの待機に失敗しました: 予期しない戻り値 %d", event)
 	}
 }

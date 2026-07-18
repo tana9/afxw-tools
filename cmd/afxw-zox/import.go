@@ -10,16 +10,16 @@ import (
 
 	"github.com/tana9/afxw-tools/cmd/afxw-zox/zoxide"
 	"github.com/tana9/afxw-tools/internal/afx"
-	"github.com/tana9/afxw-tools/internal/sliceutil"
+	"github.com/tana9/afxw-tools/internal/stringutil"
 )
 
-func runImport(ctx context.Context, client afx.Client) error {
-	dirs, err := client.DirectoryHistories([]int{afx.WindowLeft, afx.WindowRight})
+func runImport(ctx context.Context, a afx.AFX) error {
+	dirs, err := a.Histories([]int{afx.WindowLeft, afx.WindowRight})
 	if err != nil {
-		return fmt.Errorf("履歴の取得に失敗しました: %w", err)
+		return err
 	}
 
-	dirs = sliceutil.Unique(dirs)
+	dirs = stringutil.RemoveDuplicates(dirs)
 
 	if len(dirs) == 0 {
 		fmt.Println("インポートする履歴がありません。")
@@ -30,13 +30,15 @@ func runImport(ctx context.Context, client afx.Client) error {
 	if err != nil {
 		return fmt.Errorf("一時ファイルの作成に失敗しました: %w", err)
 	}
-	defer os.Remove(tmpFile.Name())
+	defer func() { _ = os.Remove(tmpFile.Name()) }()
 
 	if _, err := tmpFile.WriteString(buildZFormat(dirs, time.Now().Unix())); err != nil {
-		tmpFile.Close()
+		_ = tmpFile.Close()
 		return fmt.Errorf("一時ファイルへの書き込みに失敗しました: %w", err)
 	}
-	tmpFile.Close()
+	if err := tmpFile.Close(); err != nil {
+		return fmt.Errorf("一時ファイルのクローズに失敗しました: %w", err)
+	}
 
 	zoxCmd := exec.CommandContext(ctx, zoxide.ResolveExecutable(), "import", "--from", "z", "--merge", tmpFile.Name())
 	zoxCmd.Stdout = os.Stdout

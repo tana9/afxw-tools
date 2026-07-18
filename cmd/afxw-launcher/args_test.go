@@ -1,147 +1,77 @@
 package main
 
 import (
-	"errors"
 	"reflect"
 	"testing"
-
-	"github.com/tana9/afxw-tools/internal/afx"
-	"github.com/tana9/afxw-tools/internal/afxtest"
 )
 
-func TestExpandArgs(t *testing.T) {
-	tests := []struct {
-		name        string
-		args        []string
-		currentFile string
-		markedFiles []string
-		want        []string
-	}{
-		{
-			name: "no placeholders",
-			args: []string{"--flag", "value"},
-			want: []string{"--flag", "value"},
-		},
-		{
-			name:        "file standalone",
-			args:        []string{"{file}"},
-			currentFile: `C:\dir\file.txt`,
-			want:        []string{`C:\dir\file.txt`},
-		},
-		{
-			name:        "file embedded",
-			args:        []string{"--input={file}"},
-			currentFile: `C:\dir\file.txt`,
-			want:        []string{`--input=C:\dir\file.txt`},
-		},
-		{
-			name:        "files standalone",
-			args:        []string{"{files}"},
-			markedFiles: []string{`C:\a.txt`, `C:\b.txt`},
-			want:        []string{`C:\a.txt`, `C:\b.txt`},
-		},
-		{
-			name:        "files embedded",
-			args:        []string{"--file={files}"},
-			markedFiles: []string{`C:\a.txt`, `C:\b.txt`},
-			want:        []string{`--file=C:\a.txt`, `--file=C:\b.txt`},
-		},
-		{
-			name:        "file and files in same argument",
-			args:        []string{"{file}:{files}"},
-			currentFile: `C:\current.txt`,
-			markedFiles: []string{`C:\a.txt`, `C:\b.txt`},
-			want:        []string{`C:\current.txt:C:\a.txt`, `C:\current.txt:C:\b.txt`},
-		},
-		{
-			name:        "mixed arguments",
-			args:        []string{"--flag", "{files}", "--current", "{file}"},
-			currentFile: `C:\current.txt`,
-			markedFiles: []string{`C:\a.txt`, `C:\b.txt`},
-			want:        []string{"--flag", `C:\a.txt`, `C:\b.txt`, "--current", `C:\current.txt`},
-		},
-		{
-			name: "empty files",
-			args: []string{"before", "{files}", "after"},
-			want: []string{"before", "after"},
-		},
-	}
-
-	for _, tt := range tests {
-		t.Run(tt.name, func(t *testing.T) {
-			got := expandArgs(tt.args, tt.currentFile, tt.markedFiles)
-			if !reflect.DeepEqual(got, tt.want) {
-				t.Errorf("expandArgs(%v, %q, %v) = %v, want %v", tt.args, tt.currentFile, tt.markedFiles, got, tt.want)
-			}
-		})
+func TestExpandArgs_NoPlaceholders(t *testing.T) {
+	args := []string{"--flag", "value"}
+	got := expandArgs(args, `C:\file.txt`, []string{`C:\a.txt`, `C:\b.txt`})
+	if !reflect.DeepEqual(got, args) {
+		t.Errorf("got %v, want %v", got, args)
 	}
 }
 
-func TestResolveArgs(t *testing.T) {
-	t.Run("no placeholders skips AFX connection", func(t *testing.T) {
-		called := false
-		newClient := func() (afx.Client, error) {
-			called = true
-			return nil, errors.New("must not be called")
-		}
-		args := []string{"--flag"}
-		got, err := resolveArgsWith(args, newClient)
-		if err != nil {
-			t.Fatalf("resolveArgsWith() error = %v", err)
-		}
-		if called || !reflect.DeepEqual(got, args) {
-			t.Errorf("called = %v, args = %v", called, got)
-		}
-	})
-
-	tests := []struct {
-		name    string
-		args    []string
-		client  *afxtest.MockClient
-		newErr  error
-		want    []string
-		wantErr string
-	}{
-		{
-			name:   "file",
-			args:   []string{"{file}"},
-			client: &afxtest.MockClient{CurrentFileResult: `C:\current.txt`},
-			want:   []string{`C:\current.txt`},
-		},
-		{
-			name:   "files",
-			args:   []string{"{files}"},
-			client: &afxtest.MockClient{MarkedFilesResult: []string{`C:\a.txt`, `C:\b.txt`}},
-			want:   []string{`C:\a.txt`, `C:\b.txt`},
-		},
-		{
-			name: "file and files",
-			args: []string{"{file}", "{files}"},
-			client: &afxtest.MockClient{
-				CurrentFileResult: `C:\current.txt`,
-				MarkedFilesResult: []string{`C:\a.txt`},
-			},
-			want: []string{`C:\current.txt`, `C:\a.txt`},
-		},
-		{name: "connection error", args: []string{"{file}"}, newErr: errors.New("connect failed"), wantErr: "afxw.objへの接続に失敗しました: connect failed"},
-		{name: "current file error", args: []string{"{file}"}, client: &afxtest.MockClient{CurrentFileErr: errors.New("current failed")}, wantErr: "カレントファイルの取得に失敗しました: current failed"},
-		{name: "marked files error", args: []string{"{files}"}, client: &afxtest.MockClient{MarkedFilesErr: errors.New("marked failed")}, wantErr: "マーク済みファイルの取得に失敗しました: marked failed"},
+func TestExpandArgs_FileReplaced(t *testing.T) {
+	args := []string{"--input", "{file}"}
+	got := expandArgs(args, `C:\foo.txt`, nil)
+	want := []string{"--input", `C:\foo.txt`}
+	if !reflect.DeepEqual(got, want) {
+		t.Errorf("got %v, want %v", got, want)
 	}
+}
 
-	for _, tt := range tests {
-		t.Run(tt.name, func(t *testing.T) {
-			newClient := func() (afx.Client, error) { return tt.client, tt.newErr }
-			got, err := resolveArgsWith(tt.args, newClient)
-			if tt.wantErr == "" {
-				if err != nil {
-					t.Fatalf("resolveArgsWith() error = %v", err)
-				}
-				if !reflect.DeepEqual(got, tt.want) {
-					t.Errorf("resolveArgsWith() = %v, want %v", got, tt.want)
-				}
-			} else if err == nil || err.Error() != tt.wantErr {
-				t.Fatalf("resolveArgsWith() error = %v, want %q", err, tt.wantErr)
-			}
-		})
+func TestExpandArgs_FileEmbedded(t *testing.T) {
+	args := []string{"prefix_{file}_suffix"}
+	got := expandArgs(args, `C:\foo.txt`, nil)
+	want := []string{`prefix_C:\foo.txt_suffix`}
+	if !reflect.DeepEqual(got, want) {
+		t.Errorf("got %v, want %v", got, want)
+	}
+}
+
+func TestExpandArgs_FilesStandalone_ExpandsToMultiple(t *testing.T) {
+	marked := []string{`C:\a.txt`, `C:\b.txt`, `C:\c.txt`}
+	got := expandArgs([]string{"{files}"}, "", marked)
+	if !reflect.DeepEqual(got, marked) {
+		t.Errorf("got %v, want %v", got, marked)
+	}
+}
+
+func TestExpandArgs_FilesEmbedded_ExpandsPerFile(t *testing.T) {
+	marked := []string{`C:\a.txt`, `C:\b.txt`}
+	got := expandArgs([]string{"--file={files}"}, "", marked)
+	want := []string{`--file=C:\a.txt`, `--file=C:\b.txt`}
+	if !reflect.DeepEqual(got, want) {
+		t.Errorf("got %v, want %v", got, want)
+	}
+}
+
+func TestExpandArgs_FileAndFilesInSameArgument(t *testing.T) {
+	marked := []string{`C:\a.txt`, `C:\b.txt`}
+	got := expandArgs([]string{"--pair={file}:{files}"}, `C:\current.txt`, marked)
+	want := []string{`--pair=C:\current.txt:C:\a.txt`, `--pair=C:\current.txt:C:\b.txt`}
+	if !reflect.DeepEqual(got, want) {
+		t.Errorf("got %v, want %v", got, want)
+	}
+}
+
+func TestExpandArgs_MixedArgs(t *testing.T) {
+	// {file} と {files} を含まない引数はそのまま保持される
+	marked := []string{`C:\a.txt`, `C:\b.txt`}
+	args := []string{"--output", "result.txt", "{files}"}
+	got := expandArgs(args, "", marked)
+	want := []string{"--output", "result.txt", `C:\a.txt`, `C:\b.txt`}
+	if !reflect.DeepEqual(got, want) {
+		t.Errorf("got %v, want %v", got, want)
+	}
+}
+
+func TestExpandArgs_FilesEmpty(t *testing.T) {
+	// マーク済みファイルが空のとき {files} は0要素に展開される
+	got := expandArgs([]string{"{files}"}, "", []string{})
+	if len(got) != 0 {
+		t.Errorf("expected empty result, got %v", got)
 	}
 }

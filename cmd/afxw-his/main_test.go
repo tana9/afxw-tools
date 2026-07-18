@@ -7,41 +7,42 @@ import (
 
 	"github.com/tana9/afxw-tools/internal/afx"
 	"github.com/tana9/afxw-tools/internal/afxtest"
+	"github.com/tana9/afxw-tools/internal/cliutil"
 )
 
 func TestRun(t *testing.T) {
 	tests := []struct {
-		name         string
-		clientMock   *afxtest.MockClient
-		finderMock   *afxtest.MockFinder
-		expectErr    bool
-		expectedErr  string
-		expectedPath string
+		name             string
+		afxMock          *afxtest.MockAFX
+		finderMock       *afxtest.MockFinder
+		expectErr        bool
+		expectedErr      string
+		expectedExcdPath string
 	}{
 		{
 			name: "normal run",
-			clientMock: &afxtest.MockClient{
-				DirectoryHistoriesResult: []string{"C:\\Windows", "C:\\Users"},
+			afxMock: &afxtest.MockAFX{
+				HistoriesResult: []string{"C:\\Windows", "C:\\Users"},
 			},
 			finderMock: &afxtest.MockFinder{
 				Idx: 0,
 			},
-			expectedPath: "C:\\Windows",
+			expectedExcdPath: "C:\\Windows",
 		},
 		{
 			name: "normal run with selection",
-			clientMock: &afxtest.MockClient{
-				DirectoryHistoriesResult: []string{"C:\\Windows", "C:\\Users"},
+			afxMock: &afxtest.MockAFX{
+				HistoriesResult: []string{"C:\\Windows", "C:\\Users"},
 			},
 			finderMock: &afxtest.MockFinder{
 				Idx: 1,
 			},
-			expectedPath: "C:\\Users",
+			expectedExcdPath: "C:\\Users",
 		},
 		{
 			name: "finder cancelled",
-			clientMock: &afxtest.MockClient{
-				DirectoryHistoriesResult: []string{"C:\\Windows", "C:\\Users"},
+			afxMock: &afxtest.MockAFX{
+				HistoriesResult: []string{"C:\\Windows", "C:\\Users"},
 			},
 			finderMock: &afxtest.MockFinder{
 				Err: errors.New("fuzzyfinder cancelled"),
@@ -51,25 +52,27 @@ func TestRun(t *testing.T) {
 		},
 		{
 			name: "empty history",
-			clientMock: &afxtest.MockClient{
-				DirectoryHistoriesResult: []string{},
-			},
-			finderMock: &afxtest.MockFinder{},
-		},
-		{
-			name: "error from histories",
-			clientMock: &afxtest.MockClient{
-				DirectoryHistoriesErr: errors.New("histories error"),
+			afxMock: &afxtest.MockAFX{
+				HistoriesResult: []string{},
 			},
 			finderMock:  &afxtest.MockFinder{},
 			expectErr:   true,
-			expectedErr: "履歴の取得に失敗しました: histories error",
+			expectedErr: "フォルダ履歴が見つかりません。",
+		},
+		{
+			name: "error from histories",
+			afxMock: &afxtest.MockAFX{
+				HistoriesErr: errors.New("histories error"),
+			},
+			finderMock:  &afxtest.MockFinder{},
+			expectErr:   true,
+			expectedErr: "histories error",
 		},
 		{
 			name: "error from excd",
-			clientMock: &afxtest.MockClient{
-				DirectoryHistoriesResult: []string{"C:\\Windows"},
-				ChangeDirectoryErr:       errors.New("excd error"),
+			afxMock: &afxtest.MockAFX{
+				HistoriesResult: []string{"C:\\Windows"},
+				ExcdErr:         errors.New("excd error"),
 			},
 			finderMock: &afxtest.MockFinder{
 				Idx: 0,
@@ -81,7 +84,7 @@ func TestRun(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			err := run(tt.clientMock, tt.finderMock, nil)
+			err := run(tt.afxMock, tt.finderMock, nil)
 
 			if tt.expectErr {
 				if err == nil {
@@ -93,8 +96,8 @@ func TestRun(t *testing.T) {
 				t.Errorf("unexpected error: %v", err)
 			}
 
-			if tt.clientMock.ChangedDirectory != tt.expectedPath {
-				t.Errorf("expected directory %q, got %q", tt.expectedPath, tt.clientMock.ChangedDirectory)
+			if tt.afxMock.ExcdPath != tt.expectedExcdPath {
+				t.Errorf("expected excd path %q, got %q", tt.expectedExcdPath, tt.afxMock.ExcdPath)
 			}
 		})
 	}
@@ -102,46 +105,46 @@ func TestRun(t *testing.T) {
 
 func TestRun_WinsAffectsHistoryResults(t *testing.T) {
 	tests := []struct {
-		name         string
-		wins         []int
-		expectedPath string
+		name             string
+		wins             []int
+		expectedExcdPath string
 	}{
 		{
-			name:         "left only",
-			wins:         []int{afx.WindowLeft},
-			expectedPath: "C:\\Left",
+			name:             "left only",
+			wins:             []int{afx.WindowLeft},
+			expectedExcdPath: "C:\\Left",
 		},
 		{
-			name:         "right only",
-			wins:         []int{afx.WindowRight},
-			expectedPath: "C:\\Right",
+			name:             "right only",
+			wins:             []int{afx.WindowRight},
+			expectedExcdPath: "C:\\Right",
 		},
 		{
-			name:         "both windows uses first entry",
-			wins:         []int{afx.WindowLeft, afx.WindowRight},
-			expectedPath: "C:\\Left",
+			name:             "both windows uses first entry",
+			wins:             []int{afx.WindowLeft, afx.WindowRight},
+			expectedExcdPath: "C:\\Left",
 		},
 	}
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			clientMock := &afxtest.MockClient{
-				HistoriesByWindow: map[int][]string{
+			afxMock := &afxtest.MockAFX{
+				HistoriesByWin: map[int][]string{
 					afx.WindowLeft:  {"C:\\Left"},
 					afx.WindowRight: {"C:\\Right"},
 				},
 			}
 			finderMock := &afxtest.MockFinder{Idx: 0}
 
-			err := run(clientMock, finderMock, tt.wins)
+			err := run(afxMock, finderMock, tt.wins)
 			if err != nil {
 				t.Fatalf("unexpected error: %v", err)
 			}
-			if !reflect.DeepEqual(clientMock.RequestedWindows, tt.wins) {
-				t.Errorf("expected wins %v, got %v", tt.wins, clientMock.RequestedWindows)
+			if !reflect.DeepEqual(afxMock.ReceivedWins, tt.wins) {
+				t.Errorf("expected wins %v, got %v", tt.wins, afxMock.ReceivedWins)
 			}
-			if clientMock.ChangedDirectory != tt.expectedPath {
-				t.Errorf("expected directory %q, got %q", tt.expectedPath, clientMock.ChangedDirectory)
+			if afxMock.ExcdPath != tt.expectedExcdPath {
+				t.Errorf("expected excd path %q, got %q", tt.expectedExcdPath, afxMock.ExcdPath)
 			}
 		})
 	}
@@ -180,18 +183,31 @@ func TestParseWindowFlag(t *testing.T) {
 
 func TestRun_WithDuplicates(t *testing.T) {
 	// 左右のウィンドウで重複する履歴がある場合のテスト
-	clientMock := &afxtest.MockClient{
-		DirectoryHistoriesResult: []string{"C:\\Windows", "C:\\Users", "C:\\Windows", "C:\\Temp"},
+	afxMock := &afxtest.MockAFX{
+		HistoriesResult: []string{"C:\\Windows", "C:\\Users", "C:\\Windows", "C:\\Temp"},
 	}
 	finderMock := &afxtest.MockFinder{Idx: 1} // "C:\\Users"を選択
 
-	err := run(clientMock, finderMock, []int{afx.WindowLeft, afx.WindowRight})
+	err := run(afxMock, finderMock, []int{afx.WindowLeft, afx.WindowRight})
 	if err != nil {
 		t.Fatalf("unexpected error: %v", err)
 	}
 
 	// 重複が除去されているため、インデックス1は"C:\\Users"を指す
-	if clientMock.ChangedDirectory != "C:\\Users" {
-		t.Errorf("expected directory %q, got %q", "C:\\Users", clientMock.ChangedDirectory)
+	if afxMock.ExcdPath != "C:\\Users" {
+		t.Errorf("expected excd path %q, got %q", "C:\\Users", afxMock.ExcdPath)
+	}
+}
+
+func TestRun_EmptyHistoryReturnsNotice(t *testing.T) {
+	afxMock := &afxtest.MockAFX{HistoriesResult: []string{}}
+
+	err := run(afxMock, &afxtest.MockFinder{}, nil)
+	var notice *cliutil.Notice
+	if !errors.As(err, &notice) {
+		t.Fatalf("cliutil.Noticeが期待されましたが、%T が返りました: %v", err, err)
+	}
+	if afxMock.ExcdPath != "" {
+		t.Errorf("EXCDが呼ばれるべきではありません: %s", afxMock.ExcdPath)
 	}
 }

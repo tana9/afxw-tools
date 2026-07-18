@@ -30,6 +30,15 @@ func LoadFrom[T any](path string) (*T, error) {
 	return &cfg, nil
 }
 
+// TryLoad はTOMLファイルを読み込み、存在しない場合は (nil, nil) を返します。
+func TryLoad[T any](path string) (*T, error) {
+	cfg, err := LoadFrom[T](path)
+	if errors.Is(err, os.ErrNotExist) {
+		return nil, nil
+	}
+	return cfg, err
+}
+
 // Write は cfg をTOML形式でpathに書き込みます。親ディレクトリが無ければ作成します。
 // 既存ファイルがある場合は上書きします。
 func Write(path string, cfg any) error {

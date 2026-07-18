@@ -12,7 +12,7 @@ Use [Task](https://taskfile.dev/) from the repository root:
 - `task build-launcher` (or `build-his`, `build-bm`, `build-zox`, `build-open`) builds one command.
 - `task test` runs `go test ./...`.
 - `task integration-test` includes tests guarded by the `integration` build tag; some exercise interactive or Windows-specific behavior.
-- `task e2e-test` builds and exercises all five executables on Windows without requiring Afxw.
+- `task e2e-test` builds and exercises all six executables on Windows without requiring Afxw.
 - `task lint` runs `golangci-lint run ./...`.
 
 Run `go test ./internal/configutil` or another package path for a focused test cycle. The module requires Go 1.26 with the toolchain version declared in `go.mod`.

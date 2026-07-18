@@ -11,6 +11,7 @@
 | [afxw-bm](#afxw-bm) | ブックマークを管理し、選択したフォルダに移動 |
 | [afxw-zox](#afxw-zox) | zoxideのデータベースから選択して移動 |
 | [afxw-open](#afxw-open) | カーソル上のファイルをプログラム選択して開く |
+| [afxw-wt](#afxw-wt) | アクティブなペインのフォルダをWindows Terminalで開く |
 
 すべてのツールはあふwが起動中の状態で使用します（OLE経由であふwと連携します）。
 
@@ -200,6 +201,29 @@ args = ["x", "-y"]
 
 ---
 
+### afxw-wt
+
+あふwのアクティブなペイン（ウィンドウ）のフォルダを開始ディレクトリとして [Windows Terminal](https://github.com/microsoft/terminal) を開きます。Windows Terminalは非同期で起動し、ツール自体はすぐに終了します。
+
+**前提:** Windows Terminalがインストールされていること。PATHに `wt.exe` が無い場合でも、既定のエイリアス（`%LOCALAPPDATA%\Microsoft\WindowsApps\wt.exe`）を自動的に探して実行します。
+
+```bash
+# アクティブなペインのフォルダでWindows Terminalを開く
+afxw-wt.exe
+```
+
+afxw-launcherから呼び出す場合は、設定ファイルに以下を追加します。
+
+```toml
+[[menu]]
+name = "Windows Terminalを開く"
+description = "アクティブなペインのフォルダをWindows Terminalで開く"
+command = "afxw-wt.exe"
+args = []
+```
+
+---
+
 ## ビルド
 
 ```bash
@@ -212,6 +236,7 @@ task build-his
 task build-bm
 task build-zox
 task build-open
+task build-wt
 ```
 
 ## テスト

@@ -138,3 +138,18 @@ func assertFileAndNoTemporaryFiles(t *testing.T, path string, want []byte) {
 		}
 	}
 }
+
+func TestTryLoad(t *testing.T) {
+	path := filepath.Join(t.TempDir(), "config.toml")
+	cfg, err := TryLoad[testConfig](path)
+	if err != nil || cfg != nil {
+		t.Fatalf("TryLoad() = %+v, %v; want nil, nil", cfg, err)
+	}
+	if err := os.WriteFile(path, []byte("name = \"afxw\"\n"), 0644); err != nil {
+		t.Fatal(err)
+	}
+	cfg, err = TryLoad[testConfig](path)
+	if err != nil || cfg == nil || cfg.Name != "afxw" {
+		t.Fatalf("TryLoad() = %+v, %v; want loaded config", cfg, err)
+	}
+}

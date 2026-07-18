@@ -2,14 +2,12 @@ package main
 
 import (
 	"context"
-	"errors"
-	"fmt"
 
-	"github.com/ktr0731/go-fuzzyfinder"
 	"github.com/tana9/afxw-tools/cmd/afxw-zox/zoxide"
 	"github.com/tana9/afxw-tools/internal/afx"
 	"github.com/tana9/afxw-tools/internal/cliutil"
 	"github.com/tana9/afxw-tools/internal/finder"
+	"github.com/tana9/afxw-tools/internal/selectnav"
 	"github.com/tana9/afxw-tools/internal/singleinstance"
 	"github.com/urfave/cli/v3"
 )
@@ -29,21 +27,23 @@ func main() {
 			},
 		},
 		Action: func(ctx context.Context, cmd *cli.Command) error {
-			client, err := afx.NewOLEClient()
+			importHistory := cmd.Bool("import-history")
+			if !importHistory {
+				if err := singleinstance.Acquire("afxw-zox"); err != nil {
+					return err
+				}
+			}
+
+			a, err := afx.Connect()
 			if err != nil {
-				return fmt.Errorf("afxw.objへの接続に失敗しました: %w", err)
-			}
-			defer client.Close()
-
-			if cmd.Bool("import-history") {
-				return runImport(ctx, client)
-			}
-
-			if err := singleinstance.Acquire("afxw-zox"); err != nil {
 				return err
 			}
+			defer a.Close()
 
-			return run(client, &finder.FuzzyFinder{}, func() ([]zoxide.Entry, error) {
+			if importHistory {
+				return runImport(ctx, a)
+			}
+			return run(a, &finder.FuzzyFinder{}, func() ([]zoxide.Entry, error) {
 				return zoxide.Query(ctx)
 			})
 		},
@@ -52,31 +52,16 @@ func main() {
 	cliutil.Run(cmd)
 }
 
-func run(client afx.Client, f finder.Finder, query func() ([]zoxide.Entry, error)) error {
+// run はzoxideのデータベースから選択してあふwで移動します。データベースが空の場合はNoticeを返します。
+func run(a afx.AFX, f finder.Finder, query func() ([]zoxide.Entry, error)) error {
 	entries, err := query()
 	if err != nil {
-		return fmt.Errorf("zoxideデータベースの取得に失敗しました: %w", err)
-	}
-
-	if len(entries) == 0 {
-		fmt.Println("zoxideデータベースにディレクトリが見つかりません。")
-		fmt.Println("ターミナルでディレクトリを移動してzoxideのデータベースを構築してください。")
-		return nil
-	}
-
-	paths := zoxide.Paths(entries)
-
-	idx, err := f.Find(paths)
-	if err != nil {
-		if errors.Is(err, fuzzyfinder.ErrAbort) {
-			return nil
-		}
 		return err
 	}
 
-	if err := client.ChangeDirectory(paths[idx]); err != nil {
-		return fmt.Errorf("ディレクトリ移動に失敗しました: %w", err)
+	if len(entries) == 0 {
+		return &cliutil.Notice{Message: "zoxideデータベースにディレクトリが見つかりません。\nターミナルでディレクトリを移動してzoxideのデータベースを構築してください。"}
 	}
 
-	return nil
+	return selectnav.SelectAndMove(a, f, zoxide.Paths(entries))
 }
