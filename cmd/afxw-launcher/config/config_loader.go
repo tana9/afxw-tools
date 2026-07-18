@@ -78,7 +78,7 @@ func createDefaultConfig(path string) *Config {
 
 // addMissingStandardMenuItems は設定に存在しない標準メニューを追加し、追加した項目を返します。
 func addMissingStandardMenuItems(cfg *Config) []MenuItem {
-	standardItems := []MenuItem{openMenuItem(), windowsTerminalMenuItem(), ripgrepMenuItem(), winMergeMenuItem()}
+	standardItems := standardMenuItems()
 	missing := make([]MenuItem, 0, len(standardItems))
 	for _, standard := range standardItems {
 		found := false

@@ -168,12 +168,17 @@ func (a *oleAFX) GetCurrentFile() (string, error) {
 }
 
 func (a *oleAFX) GetMarkedFiles() ([]string, error) {
+	return getMarkedFiles(a.extract, a.GetCurrentFile)
+}
+
+// getMarkedFiles はマーク項目を改行区切りで展開してパス一覧に変換します。
+func getMarkedFiles(extract func(string) (string, error), getCurrentFile func() (string, error)) ([]string, error) {
 	// $JU はマーク項目の区切りを改行にするため、空白を含むパスも安全に分離できる。
-	result, err := a.extract(markedFilesMacro)
+	result, err := extract(markedFilesMacro)
 	if err != nil {
 		return nil, err
 	}
-	return parseMarkedFiles(result, a.GetCurrentFile)
+	return parseMarkedFiles(result, getCurrentFile)
 }
 
 func parseMarkedFiles(result string, getCurrentFile func() (string, error)) ([]string, error) {

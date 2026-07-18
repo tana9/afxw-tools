@@ -25,17 +25,15 @@ type Config struct {
 }
 
 func DefaultConfig() *Config {
+	menu := []MenuItem{
+		{Name: "フォルダ履歴から選択", Description: "あふwのフォルダ履歴から選択して移動", Command: "afxw-his.exe", Args: []string{}},
+		{Name: "zoxideから選択", Description: "zoxideのfrecencyデータベースから選択して移動", Command: "afxw-zox.exe", Args: []string{}},
+		{Name: "ブックマークから選択", Description: "ブックマークから選択して移動", Command: "afxw-bm.exe", Args: []string{}},
+		{Name: "ブックマークを追加", Description: "現在のディレクトリをブックマークに追加", Command: "afxw-bm.exe", Args: []string{"-a", ""}},
+	}
+	menu = append(menu, standardMenuItems()...)
 	return &Config{
-		Menu: []MenuItem{
-			{Name: "フォルダ履歴から選択", Description: "あふwのフォルダ履歴から選択して移動", Command: "afxw-his.exe", Args: []string{}},
-			{Name: "zoxideから選択", Description: "zoxideのfrecencyデータベースから選択して移動", Command: "afxw-zox.exe", Args: []string{}},
-			{Name: "ブックマークから選択", Description: "ブックマークから選択して移動", Command: "afxw-bm.exe", Args: []string{}},
-			{Name: "ブックマークを追加", Description: "現在のディレクトリをブックマークに追加", Command: "afxw-bm.exe", Args: []string{"-a", ""}},
-			openMenuItem(),
-			windowsTerminalMenuItem(),
-			ripgrepMenuItem(),
-			winMergeMenuItem(),
-		},
+		Menu:     menu,
 		Settings: Settings{ToolDir: ""},
 	}
 }
@@ -91,4 +89,9 @@ func ripgrepMenuItem() MenuItem {
 // winMergeMenuItem は「WinMergeで比較」の標準メニュー項目を返します。
 func winMergeMenuItem() MenuItem {
 	return MenuItem{Name: "WinMergeで比較", Description: "マークした2項目をWinMergeで比較", Command: "afxw-diff.exe", Args: []string{}}
+}
+
+// standardMenuItems は新規設定と既存設定への移行で共有する標準メニューを返します。
+func standardMenuItems() []MenuItem {
+	return []MenuItem{openMenuItem(), windowsTerminalMenuItem(), ripgrepMenuItem(), winMergeMenuItem()}
 }

@@ -100,8 +100,20 @@ func TestParseMarkedFiles(t *testing.T) {
 	})
 }
 
-func TestMarkedFilesMacroDoesNotAppendPaneLiteral(t *testing.T) {
-	if markedFilesMacro != "$JU$MF" {
-		t.Fatalf("markedFilesMacro = %q", markedFilesMacro)
+func TestGetMarkedFilesUsesNewlineSeparatedMacro(t *testing.T) {
+	var gotMacro string
+	got, err := getMarkedFiles(func(macro string) (string, error) {
+		gotMacro = macro
+		return "\"C:\\first file.txt\"\n\"C:\\second file.txt\"", nil
+	}, nil)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if gotMacro != "$JU$MF" {
+		t.Fatalf("extract macro = %q", gotMacro)
+	}
+	want := []string{`C:\first file.txt`, `C:\second file.txt`}
+	if !reflect.DeepEqual(got, want) {
+		t.Fatalf("files = %v, want %v", got, want)
 	}
 }

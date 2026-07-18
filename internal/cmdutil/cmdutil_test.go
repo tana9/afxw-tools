@@ -27,6 +27,17 @@ func TestFind_AbsolutePath_Exists(t *testing.T) {
 }
 
 func TestResolveExecutable(t *testing.T) {
+	t.Run("PATH takes priority", func(t *testing.T) {
+		pathDir := t.TempDir()
+		pathExecutable := makeExe(t, pathDir, "tool.exe")
+		candidate := makeExe(t, t.TempDir(), "tool.exe")
+		t.Setenv("PATH", pathDir)
+
+		if got := ResolveExecutable("tool.exe", candidate); got != pathExecutable {
+			t.Fatalf("ResolveExecutable() = %q, want PATH executable %q", got, pathExecutable)
+		}
+	})
+
 	t.Run("candidate", func(t *testing.T) {
 		t.Setenv("PATH", "")
 		executable := filepath.Join(t.TempDir(), "tool.exe")
@@ -34,6 +45,24 @@ func TestResolveExecutable(t *testing.T) {
 			t.Fatal(err)
 		}
 		if got := ResolveExecutable("tool.exe", "", executable); got != executable {
+			t.Fatalf("ResolveExecutable() = %q, want %q", got, executable)
+		}
+	})
+
+	t.Run("first existing candidate", func(t *testing.T) {
+		t.Setenv("PATH", "")
+		first := makeExe(t, t.TempDir(), "first.exe")
+		second := makeExe(t, t.TempDir(), "second.exe")
+		if got := ResolveExecutable("tool.exe", first, second); got != first {
+			t.Fatalf("ResolveExecutable() = %q, want %q", got, first)
+		}
+	})
+
+	t.Run("directory is ignored", func(t *testing.T) {
+		t.Setenv("PATH", "")
+		directory := t.TempDir()
+		executable := makeExe(t, t.TempDir(), "tool.exe")
+		if got := ResolveExecutable("tool.exe", directory, executable); got != executable {
 			t.Fatalf("ResolveExecutable() = %q, want %q", got, executable)
 		}
 	})
