@@ -76,6 +76,7 @@ func createDefaultConfig(path string) *Config {
 	return cfg
 }
 
+// addMissingStandardMenuItems は設定に存在しない標準メニューを追加し、追加した項目を返します。
 func addMissingStandardMenuItems(cfg *Config) []MenuItem {
 	standardItems := []MenuItem{openMenuItem(), windowsTerminalMenuItem()}
 	missing := make([]MenuItem, 0, len(standardItems))
@@ -95,6 +96,7 @@ func addMissingStandardMenuItems(cfg *Config) []MenuItem {
 	return missing
 }
 
+// appendMenuItems は既存設定ファイルを維持したままメニュー項目を追記します。
 func appendMenuItems(path string, items []MenuItem) error {
 	return configutil.Append(path, struct {
 		Menu []MenuItem `toml:"menu"`

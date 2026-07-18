@@ -145,6 +145,47 @@ args = []
 	}
 }
 
+func TestLoad_MigratesOnlyMissingWindowsTerminalMenu(t *testing.T) {
+	configPath := filepath.Join(t.TempDir(), "config.toml")
+	localPath := filepath.Join(t.TempDir(), "local-config.toml")
+	content := `
+# 既存設定を保持する
+[[menu]]
+name = "ファイルを開く"
+command = "afxw-open.exe"
+args = ["{files}"]
+`
+	if err := os.WriteFile(configPath, []byte(content), 0644); err != nil {
+		t.Fatal(err)
+	}
+
+	cfg, err := load(configPath, localPath)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(cfg.Menu) != 2 {
+		t.Fatalf("expected only the missing menu to be added, got %d items", len(cfg.Menu))
+	}
+	if cfg.Menu[0].Command != "afxw-open.exe" || cfg.Menu[1].Command != "afxw-wt.exe" {
+		t.Fatalf("unexpected migrated menus: %+v", cfg.Menu)
+	}
+
+	persisted, err := LoadFrom(configPath)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(persisted.Menu) != 2 || persisted.Menu[1].Command != "afxw-wt.exe" {
+		t.Fatalf("migration was not persisted: %+v", persisted.Menu)
+	}
+	persistedContent, err := os.ReadFile(configPath)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if !strings.Contains(string(persistedContent), "# 既存設定を保持する") {
+		t.Error("existing comments were not preserved")
+	}
+}
+
 func TestLoadFrom(t *testing.T) {
 	tmpDir := t.TempDir()
 	configPath := filepath.Join(tmpDir, "config.toml")
