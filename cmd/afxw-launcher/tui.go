@@ -62,8 +62,10 @@ func (m model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			}
 
 		case "enter":
-			m.selected = true
-			return m, tea.Quit
+			if len(m.cfg.Menu) > 0 {
+				m.selected = true
+				return m, tea.Quit
+			}
 
 		case "1", "2", "3", "4", "5", "6", "7", "8", "9":
 			idx := int(msg.String()[0] - '1')

@@ -1,8 +1,8 @@
 package main
 
 import (
+	"context"
 	"errors"
-	"strings"
 	"testing"
 
 	"github.com/ktr0731/go-fuzzyfinder"
@@ -10,122 +10,116 @@ import (
 	"github.com/tana9/afxw-tools/internal/afxtest"
 )
 
-func makeQuery(entries []zoxide.Entry, err error) func() ([]zoxide.Entry, error) {
-	return func() ([]zoxide.Entry, error) {
-		return entries, err
+func TestRun(t *testing.T) {
+	tests := []struct {
+		name          string
+		entries       []zoxide.Entry
+		queryErr      error
+		client        *afxtest.MockClient
+		finder        *afxtest.MockFinder
+		wantDirectory string
+		wantErr       string
+	}{
+		{
+			name: "selects entry",
+			entries: []zoxide.Entry{
+				{Path: `C:\Users\Test`, Score: 10},
+				{Path: `C:\Projects`, Score: 20},
+			},
+			client:        &afxtest.MockClient{},
+			finder:        &afxtest.MockFinder{Idx: 1},
+			wantDirectory: `C:\Projects`,
+		},
+		{
+			name:    "empty entries",
+			entries: []zoxide.Entry{},
+			client:  &afxtest.MockClient{},
+			finder:  &afxtest.MockFinder{},
+		},
+		{
+			name:     "query error",
+			queryErr: errors.New("query error"),
+			client:   &afxtest.MockClient{},
+			finder:   &afxtest.MockFinder{},
+			wantErr:  "zoxideデータベースの取得に失敗しました: query error",
+		},
+		{
+			name:    "selection cancelled",
+			entries: []zoxide.Entry{{Path: `C:\Users\Test`, Score: 10}},
+			client:  &afxtest.MockClient{},
+			finder:  &afxtest.MockFinder{Err: fuzzyfinder.ErrAbort},
+		},
+		{
+			name:    "selection error",
+			entries: []zoxide.Entry{{Path: `C:\Users\Test`, Score: 10}},
+			client:  &afxtest.MockClient{},
+			finder:  &afxtest.MockFinder{Err: errors.New("finder error")},
+			wantErr: "finder error",
+		},
+		{
+			name:    "directory change error",
+			entries: []zoxide.Entry{{Path: `C:\Users\Test`, Score: 10}},
+			client: &afxtest.MockClient{
+				ChangeDirectoryErr: errors.New("change directory error"),
+			},
+			finder:  &afxtest.MockFinder{Idx: 0},
+			wantErr: "ディレクトリ移動に失敗しました: change directory error",
+		},
 	}
-}
 
-func TestRun_Normal(t *testing.T) {
-	afxMock := &afxtest.MockAFX{}
-	finderMock := &afxtest.MockFinder{Idx: 1}
-	query := makeQuery([]zoxide.Entry{
-		{Path: `C:\Users\Test`, Score: 10.0},
-		{Path: `C:\Projects`, Score: 20.0},
-	}, nil)
-
-	if err := run(afxMock, finderMock, query); err != nil {
-		t.Fatalf("予期しないエラー: %v", err)
-	}
-
-	if afxMock.ExcdPath != `C:\Projects` {
-		t.Errorf("期待: C:\\Projects, 取得: %s", afxMock.ExcdPath)
-	}
-}
-
-func TestRun_EmptyEntries(t *testing.T) {
-	afxMock := &afxtest.MockAFX{}
-	finderMock := &afxtest.MockFinder{}
-	query := makeQuery([]zoxide.Entry{}, nil)
-
-	if err := run(afxMock, finderMock, query); err != nil {
-		t.Fatalf("予期しないエラー: %v", err)
-	}
-
-	if afxMock.ExcdPath != "" {
-		t.Errorf("EXCDが呼ばれるべきではありません: %s", afxMock.ExcdPath)
-	}
-}
-
-func TestRun_QueryError(t *testing.T) {
-	afxMock := &afxtest.MockAFX{}
-	finderMock := &afxtest.MockFinder{}
-	query := makeQuery(nil, errors.New("query error"))
-
-	err := run(afxMock, finderMock, query)
-	if err == nil {
-		t.Fatal("エラーが期待されましたが、nilが返りました")
-	}
-	if err.Error() != "zoxideデータベースの取得に失敗しました: query error" {
-		t.Errorf("予期しないエラーメッセージ: %v", err)
-	}
-}
-
-func TestRun_FinderCancelled(t *testing.T) {
-	afxMock := &afxtest.MockAFX{}
-	finderMock := &afxtest.MockFinder{Err: fuzzyfinder.ErrAbort}
-	query := makeQuery([]zoxide.Entry{{Path: `C:\Users\Test`, Score: 10.0}}, nil)
-
-	if err := run(afxMock, finderMock, query); err != nil {
-		t.Fatalf("キャンセルはエラーになるべきではありません: %v", err)
-	}
-}
-
-func TestRun_FinderError(t *testing.T) {
-	afxMock := &afxtest.MockAFX{}
-	finderMock := &afxtest.MockFinder{Err: errors.New("finder error")}
-	query := makeQuery([]zoxide.Entry{{Path: `C:\Users\Test`, Score: 10.0}}, nil)
-
-	if err := run(afxMock, finderMock, query); err == nil {
-		t.Fatal("エラーが期待されましたが、nilが返りました")
-	}
-}
-
-func TestRun_ExcdError(t *testing.T) {
-	afxMock := &afxtest.MockAFX{ExcdErr: errors.New("excd error")}
-	finderMock := &afxtest.MockFinder{Idx: 0}
-	query := makeQuery([]zoxide.Entry{{Path: `C:\Users\Test`, Score: 10.0}}, nil)
-
-	err := run(afxMock, finderMock, query)
-	if err == nil {
-		t.Fatal("エラーが期待されましたが、nilが返りました")
-	}
-	if err.Error() != "ディレクトリ移動に失敗しました: excd error" {
-		t.Errorf("予期しないエラーメッセージ: %v", err)
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			query := func() ([]zoxide.Entry, error) { return tt.entries, tt.queryErr }
+			err := run(tt.client, tt.finder, query)
+			if tt.wantErr == "" {
+				if err != nil {
+					t.Fatalf("run() error = %v", err)
+				}
+			} else if err == nil || err.Error() != tt.wantErr {
+				t.Fatalf("run() error = %v, want %q", err, tt.wantErr)
+			}
+			if tt.client.ChangedDirectory != tt.wantDirectory {
+				t.Errorf("ChangedDirectory = %q, want %q", tt.client.ChangedDirectory, tt.wantDirectory)
+			}
+		})
 	}
 }
 
 func TestBuildZFormat(t *testing.T) {
-	paths := []string{`C:\Users\Test`, `C:\Projects`}
-	got := buildZFormat(paths, 1234567890)
-
-	lines := strings.Split(strings.TrimRight(got, "\n"), "\n")
-	if len(lines) != 2 {
-		t.Fatalf("期待する行数: 2, 取得: %d", len(lines))
-	}
-	if lines[0] != `C:\Users\Test|1|1234567890` {
-		t.Errorf("予期しない1行目: %s", lines[0])
-	}
-	if lines[1] != `C:\Projects|1|1234567890` {
-		t.Errorf("予期しない2行目: %s", lines[1])
+	got := buildZFormat([]string{`C:\Users\Test`, `C:\Projects`}, 1234567890)
+	want := "C:\\Users\\Test|1|1234567890\nC:\\Projects|1|1234567890\n"
+	if got != want {
+		t.Errorf("buildZFormat() = %q, want %q", got, want)
 	}
 }
 
-func TestRunImport_HistoriesError(t *testing.T) {
-	afxMock := &afxtest.MockAFX{HistoriesErr: errors.New("history error")}
-
-	err := runImport(afxMock)
-	if err == nil {
-		t.Fatal("エラーが期待されましたが、nilが返りました")
+func TestRunImport(t *testing.T) {
+	tests := []struct {
+		name    string
+		client  *afxtest.MockClient
+		wantErr string
+	}{
+		{
+			name:    "history error",
+			client:  &afxtest.MockClient{DirectoryHistoriesErr: errors.New("history error")},
+			wantErr: "履歴の取得に失敗しました: history error",
+		},
+		{
+			name:   "empty history",
+			client: &afxtest.MockClient{DirectoryHistoriesResult: []string{}},
+		},
 	}
-}
 
-func TestRunImport_EmptyHistory(t *testing.T) {
-	afxMock := &afxtest.MockAFX{HistoriesResult: []string{}}
-
-	// 履歴が空の場合はzoxideを呼ばずに正常終了する
-	err := runImport(afxMock)
-	if err != nil {
-		t.Fatalf("予期しないエラー: %v", err)
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			err := runImport(context.Background(), tt.client)
+			if tt.wantErr == "" {
+				if err != nil {
+					t.Fatalf("runImport() error = %v", err)
+				}
+			} else if err == nil || err.Error() != tt.wantErr {
+				t.Fatalf("runImport() error = %v, want %q", err, tt.wantErr)
+			}
+		})
 	}
 }

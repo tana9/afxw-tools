@@ -10,7 +10,7 @@ import (
 	"github.com/tana9/afxw-tools/internal/cliutil"
 	"github.com/tana9/afxw-tools/internal/finder"
 	"github.com/tana9/afxw-tools/internal/singleinstance"
-	"github.com/tana9/afxw-tools/internal/stringutil"
+	"github.com/tana9/afxw-tools/internal/sliceutil"
 	"github.com/urfave/cli/v3"
 )
 
@@ -34,18 +34,18 @@ func main() {
 				return err
 			}
 
-			a, err := afx.NewOleAFX()
+			client, err := afx.NewOLEClient()
 			if err != nil {
 				return fmt.Errorf("afxw.objへの接続に失敗しました: %w", err)
 			}
-			defer a.Close()
+			defer client.Close()
 
 			wins, err := parseWindowFlag(cmd.String("window"))
 			if err != nil {
 				return err
 			}
 
-			return run(a, &finder.FuzzyFinder{}, wins)
+			return run(client, &finder.FuzzyFinder{}, wins)
 		},
 	}
 
@@ -65,13 +65,13 @@ func parseWindowFlag(window string) ([]int, error) {
 	}
 }
 
-func run(a afx.AFX, f finder.Finder, wins []int) error {
-	dirs, err := a.Histories(wins)
+func run(client afx.Client, f finder.Finder, windows []int) error {
+	dirs, err := client.DirectoryHistories(windows)
 	if err != nil {
 		return fmt.Errorf("履歴の取得に失敗しました: %w", err)
 	}
 
-	dirs = stringutil.RemoveDuplicates(dirs)
+	dirs = sliceutil.Unique(dirs)
 
 	if len(dirs) == 0 {
 		return nil
@@ -85,7 +85,7 @@ func run(a afx.AFX, f finder.Finder, wins []int) error {
 		return err
 	}
 
-	if err := a.EXCD(dirs[idx]); err != nil {
+	if err := client.ChangeDirectory(dirs[idx]); err != nil {
 		return fmt.Errorf("ディレクトリ移動に失敗しました: %w", err)
 	}
 

@@ -14,23 +14,26 @@ const (
 	WindowRight = 1
 )
 
-// AFX は afxw.obj と対話するためのインターフェースです。
-type AFX interface {
-	Histories(wins []int) ([]string, error)
-	EXCD(path string) error
-	GetActivePath() (string, error)
-	GetCurrentFile() (string, error)
-	// マークなし時はカーソルファイルを返す。パスにスペースを含む場合は正しく動作しない。
-	GetMarkedFiles() ([]string, error)
+// Client は afxw.obj と対話するためのインターフェースです。
+type Client interface {
+	DirectoryHistories(windows []int) ([]string, error)
+	ChangeDirectory(path string) error
+	ActivePath() (string, error)
+	CurrentFile() (string, error)
+	// MarkedFiles はマーク済みファイルを返し、マークがなければカーソル位置のファイルを返します。
+	MarkedFiles() ([]string, error)
 	Close()
 }
 
-type oleAFX struct {
+type oleClient struct {
 	afxw    *ole.IDispatch
 	unknown *ole.IUnknown
 }
 
-func NewOleAFX() (AFX, error) {
+// callCOMMethod はCOM境界を単体テストで差し替え可能にするための関数変数です。
+var callCOMMethod = oleutil.CallMethod
+
+func NewOLEClient() (Client, error) {
 	runtime.LockOSThread()
 	success := false
 	defer func() {
@@ -64,23 +67,23 @@ func NewOleAFX() (AFX, error) {
 	}
 
 	success = true
-	return &oleAFX{afxw: afxw, unknown: unknown}, nil
+	return &oleClient{afxw: afxw, unknown: unknown}, nil
 }
 
-func (a *oleAFX) Histories(wins []int) ([]string, error) {
+func (a *oleClient) DirectoryHistories(windows []int) ([]string, error) {
 	var dirs []string
-	for _, win := range wins {
-		winDirs, err := a.getWindowHistories(win)
+	for _, window := range windows {
+		windowDirs, err := a.windowDirectoryHistories(window)
 		if err != nil {
 			return nil, err
 		}
-		dirs = append(dirs, winDirs...)
+		dirs = append(dirs, windowDirs...)
 	}
 	return dirs, nil
 }
 
-func (a *oleAFX) getWindowHistories(win int) ([]string, error) {
-	res, err := oleutil.CallMethod(a.afxw, "HisDirCount", win)
+func (a *oleClient) windowDirectoryHistories(window int) ([]string, error) {
+	res, err := callCOMMethod(a.afxw, "HisDirCount", window)
 	if err != nil {
 		return nil, fmt.Errorf("履歴件数の取得に失敗しました: %w", err)
 	}
@@ -92,7 +95,7 @@ func (a *oleAFX) getWindowHistories(win int) ([]string, error) {
 
 	dirs := make([]string, 0, count)
 	for i := range count {
-		res, err := oleutil.CallMethod(a.afxw, "HisDir", win, i)
+		res, err := callCOMMethod(a.afxw, "HisDir", window, i)
 		if err != nil {
 			return nil, fmt.Errorf("履歴の取得に失敗しました: %w", err)
 		}
@@ -119,21 +122,22 @@ func toInt(v any) (int, error) {
 	}
 }
 
-func (a *oleAFX) EXCD(path string) error {
+func (a *oleClient) ChangeDirectory(path string) error {
 	normalizedPath := ensureTrailingBackslash(path)
-	_, err := oleutil.CallMethod(a.afxw, "Exec", fmt.Sprintf("&EXCD -P\"%s\"", normalizedPath))
+	res, err := callCOMMethod(a.afxw, "Exec", fmt.Sprintf("&EXCD -P\"%s\"", normalizedPath))
 	if err != nil {
 		return fmt.Errorf("EXCD呼び出しに失敗しました: %w", err)
 	}
+	res.Clear()
 	return nil
 }
 
-func (a *oleAFX) GetActivePath() (string, error) {
+func (a *oleClient) ActivePath() (string, error) {
 	// $P はアクティブウィンドウのカレントディレクトリに展開されます
 	return a.extract("$P")
 }
 
-func (a *oleAFX) GetCurrentFile() (string, error) {
+func (a *oleClient) CurrentFile() (string, error) {
 	// $P はカレントディレクトリ（末尾に \ あり）、$F はカーソル上のファイル名
 	dir, err := a.extract("$P")
 	if err != nil {
@@ -146,13 +150,14 @@ func (a *oleAFX) GetCurrentFile() (string, error) {
 	return dir + name, nil
 }
 
-func (a *oleAFX) GetMarkedFiles() ([]string, error) {
-	// $MFP はスペース区切りで返されるため、パスにスペースが含まれる場合は正しく動作しない
-	result, err := a.extract("$MFP")
+func (a *oleClient) MarkedFiles() ([]string, error) {
+	// $JU はマークファイル間の区切りをLFにし、$QN は各パスの引用符を外す。
+	// 空白区切りでは空白を含むパスを判別できないため、行単位で取得する。
+	result, err := a.extract("$JU$QN$MF")
 	if err != nil {
 		return nil, err
 	}
-	return parseMarkedFiles(result, a.GetCurrentFile)
+	return parseMarkedFiles(result, a.CurrentFile)
 }
 
 func parseMarkedFiles(result string, getCurrentFile func() (string, error)) ([]string, error) {
@@ -164,11 +169,17 @@ func parseMarkedFiles(result string, getCurrentFile func() (string, error)) ([]s
 		}
 		return []string{f}, nil
 	}
-	return strings.Fields(result), nil
+	files := make([]string, 0, strings.Count(result, "\n")+1)
+	for line := range strings.SplitSeq(result, "\n") {
+		if line = strings.TrimSpace(line); line != "" {
+			files = append(files, line)
+		}
+	}
+	return files, nil
 }
 
-func (a *oleAFX) extract(variable string) (string, error) {
-	res, err := oleutil.CallMethod(a.afxw, "Extract", variable)
+func (a *oleClient) extract(variable string) (string, error) {
+	res, err := callCOMMethod(a.afxw, "Extract", variable)
 	if err != nil {
 		return "", fmt.Errorf("変数の展開に失敗しました (%s): %w", variable, err)
 	}
@@ -177,7 +188,7 @@ func (a *oleAFX) extract(variable string) (string, error) {
 	return value, nil
 }
 
-func (a *oleAFX) Close() {
+func (a *oleClient) Close() {
 	defer runtime.UnlockOSThread()
 	defer ole.CoUninitialize()
 

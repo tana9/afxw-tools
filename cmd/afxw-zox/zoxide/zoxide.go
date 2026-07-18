@@ -1,6 +1,7 @@
 package zoxide
 
 import (
+	"context"
 	"errors"
 	"fmt"
 	"os"
@@ -75,8 +76,12 @@ func resolveExecutable() string {
 }
 
 // Query はzoxideのクエリを実行してスコア降順のエントリを返します。
-func Query() ([]Entry, error) {
-	cmd := exec.Command(ResolveExecutable(), "query", "--list", "--score")
+func Query(ctx context.Context) ([]Entry, error) {
+	return queryWith(ctx, ResolveExecutable())
+}
+
+func queryWith(ctx context.Context, executable string) ([]Entry, error) {
+	cmd := exec.CommandContext(ctx, executable, "query", "--list", "--score")
 	output, err := cmd.Output()
 	if err != nil {
 		var exitErr *exec.ExitError

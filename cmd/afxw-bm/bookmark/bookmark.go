@@ -6,9 +6,12 @@ import (
 	"os"
 	"path/filepath"
 	"strings"
+	"sync"
 
-	"github.com/tana9/afxw-tools/internal/stringutil"
+	"github.com/tana9/afxw-tools/internal/sliceutil"
 )
+
+var addMu sync.Mutex
 
 func GetDefaultPath() (string, error) {
 	exe, err := os.Executable()
@@ -33,10 +36,13 @@ func Load(path string) ([]string, error) {
 			lines = append(lines, line)
 		}
 	}
-	return stringutil.RemoveDuplicates(lines), nil
+	return sliceutil.Unique(lines), nil
 }
 
 func Add(path string, newItem string) error {
+	addMu.Lock()
+	defer addMu.Unlock()
+
 	// Windowsでの一貫性のため、パス区切り文字をバックスラッシュに正規化します
 	newItem = filepath.Clean(newItem)
 

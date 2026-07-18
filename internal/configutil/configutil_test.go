@@ -1,7 +1,9 @@
 package configutil
 
 import (
+	"os"
 	"path/filepath"
+	"strings"
 	"testing"
 )
 
@@ -86,5 +88,53 @@ func TestAppendNotExist(t *testing.T) {
 
 	if err := Append(path, &testConfig{Name: "a"}); err == nil {
 		t.Fatal("Append() error = nil; 存在しないファイルはエラーを期待")
+	}
+}
+
+func TestWriteEncodeErrorKeepsExistingFile(t *testing.T) {
+	dir := t.TempDir()
+	path := filepath.Join(dir, "config.toml")
+	want := []byte("name = \"original\"\n")
+	if err := os.WriteFile(path, want, 0644); err != nil {
+		t.Fatal(err)
+	}
+
+	if err := Write(path, map[string]any{"unsupported": make(chan int)}); err == nil {
+		t.Fatal("Write() error = nil; エンコードできない値はエラーを期待")
+	}
+	assertFileAndNoTemporaryFiles(t, path, want)
+}
+
+func TestAppendEncodeErrorKeepsExistingFile(t *testing.T) {
+	dir := t.TempDir()
+	path := filepath.Join(dir, "config.toml")
+	want := []byte("name = \"original\"\n")
+	if err := os.WriteFile(path, want, 0644); err != nil {
+		t.Fatal(err)
+	}
+
+	if err := Append(path, map[string]any{"unsupported": make(chan int)}); err == nil {
+		t.Fatal("Append() error = nil; エンコードできない値はエラーを期待")
+	}
+	assertFileAndNoTemporaryFiles(t, path, want)
+}
+
+func assertFileAndNoTemporaryFiles(t *testing.T, path string, want []byte) {
+	t.Helper()
+	got, err := os.ReadFile(path)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if string(got) != string(want) {
+		t.Errorf("file content = %q, want %q", got, want)
+	}
+	entries, err := os.ReadDir(filepath.Dir(path))
+	if err != nil {
+		t.Fatal(err)
+	}
+	for _, entry := range entries {
+		if strings.HasPrefix(entry.Name(), "."+filepath.Base(path)+".tmp-") {
+			t.Errorf("temporary file remains: %s", entry.Name())
+		}
 	}
 }

@@ -39,3 +39,6 @@ tasks:
   integration-test:
     cmds:
       - go test -tags=integration ./...
+  e2e-test:
+    cmds:
+      - go test -tags=e2e ./e2e

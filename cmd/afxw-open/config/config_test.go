@@ -63,6 +63,37 @@ command = "notepad.exe"
 	}
 }
 
+func TestValidate(t *testing.T) {
+	tests := []struct {
+		name string
+		cfg  Config
+	}{
+		{name: "empty name", cfg: Config{Programs: []Program{{Name: " ", Command: "tool.exe"}}}},
+		{name: "empty command", cfg: Config{Programs: []Program{{Name: "Tool", Command: "\t"}}}},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			if err := tt.cfg.Validate(); err == nil {
+				t.Fatal("Validate() error = nil, want error")
+			}
+		})
+	}
+
+	if err := DefaultConfig().Validate(); err != nil {
+		t.Fatalf("DefaultConfig().Validate() error = %v", err)
+	}
+}
+
+func TestLoadFrom_InvalidValue(t *testing.T) {
+	path := filepath.Join(t.TempDir(), "config.toml")
+	if err := os.WriteFile(path, []byte("[[program]]\nname = \" \"\ncommand = \"tool.exe\"\n"), 0644); err != nil {
+		t.Fatal(err)
+	}
+	if _, err := LoadFrom(path); err == nil {
+		t.Fatal("LoadFrom() error = nil, want validation error")
+	}
+}
+
 func TestLoadFrom_NotFound(t *testing.T) {
 	_, err := LoadFrom("/non/existent/path.toml")
 	if err == nil {

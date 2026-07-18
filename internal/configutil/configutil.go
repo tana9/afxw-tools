@@ -3,6 +3,7 @@ package configutil
 import (
 	"errors"
 	"fmt"
+	"io"
 	"os"
 	"path/filepath"
 
@@ -35,31 +36,32 @@ func Write(path string, cfg any) error {
 	if err := os.MkdirAll(filepath.Dir(path), 0755); err != nil {
 		return fmt.Errorf("ディレクトリの作成に失敗しました: %w", err)
 	}
-	f, err := os.Create(path)
-	if err != nil {
-		return fmt.Errorf("ファイルの作成に失敗しました: %w", err)
-	}
-	defer f.Close()
-	if err := toml.NewEncoder(f).Encode(cfg); err != nil {
-		return fmt.Errorf("設定の書き込みに失敗しました: %w", err)
-	}
-	return nil
+	return atomicWrite(path, func(w io.Writer) error {
+		if err := toml.NewEncoder(w).Encode(cfg); err != nil {
+			return fmt.Errorf("設定の書き込みに失敗しました: %w", err)
+		}
+		return nil
+	})
 }
 
 // Append は既存の設定ファイルに v をTOMLとして追記します。
 // 追記の前に改行を1つ挟むため、既存内容と区切られた新しいテーブルの追加に使えます。
 func Append(path string, v any) error {
-	f, err := os.OpenFile(path, os.O_APPEND|os.O_WRONLY, 0644)
+	existing, err := os.ReadFile(path)
 	if err != nil {
 		return fmt.Errorf("ファイルのオープンに失敗しました: %w", err)
 	}
-	defer f.Close()
 
-	if _, err := f.WriteString("\n"); err != nil {
-		return fmt.Errorf("改行の書き込みに失敗しました: %w", err)
-	}
-	if err := toml.NewEncoder(f).Encode(v); err != nil {
-		return fmt.Errorf("設定の書き込みに失敗しました: %w", err)
-	}
-	return nil
+	return atomicWrite(path, func(w io.Writer) error {
+		if _, err := w.Write(existing); err != nil {
+			return fmt.Errorf("既存設定の書き込みに失敗しました: %w", err)
+		}
+		if _, err := io.WriteString(w, "\n"); err != nil {
+			return fmt.Errorf("改行の書き込みに失敗しました: %w", err)
+		}
+		if err := toml.NewEncoder(w).Encode(v); err != nil {
+			return fmt.Errorf("設定の書き込みに失敗しました: %w", err)
+		}
+		return nil
+	})
 }

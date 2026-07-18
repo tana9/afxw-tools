@@ -29,28 +29,30 @@ func main() {
 			},
 		},
 		Action: func(ctx context.Context, cmd *cli.Command) error {
-			a, err := afx.NewOleAFX()
+			client, err := afx.NewOLEClient()
 			if err != nil {
 				return fmt.Errorf("afxw.objへの接続に失敗しました: %w", err)
 			}
-			defer a.Close()
+			defer client.Close()
 
 			if cmd.Bool("import-history") {
-				return runImport(a)
+				return runImport(ctx, client)
 			}
 
 			if err := singleinstance.Acquire("afxw-zox"); err != nil {
 				return err
 			}
 
-			return run(a, &finder.FuzzyFinder{}, zoxide.Query)
+			return run(client, &finder.FuzzyFinder{}, func() ([]zoxide.Entry, error) {
+				return zoxide.Query(ctx)
+			})
 		},
 	}
 
 	cliutil.Run(cmd)
 }
 
-func run(a afx.AFX, f finder.Finder, query func() ([]zoxide.Entry, error)) error {
+func run(client afx.Client, f finder.Finder, query func() ([]zoxide.Entry, error)) error {
 	entries, err := query()
 	if err != nil {
 		return fmt.Errorf("zoxideデータベースの取得に失敗しました: %w", err)
@@ -72,7 +74,7 @@ func run(a afx.AFX, f finder.Finder, query func() ([]zoxide.Entry, error)) error
 		return err
 	}
 
-	if err := a.EXCD(paths[idx]); err != nil {
+	if err := client.ChangeDirectory(paths[idx]); err != nil {
 		return fmt.Errorf("ディレクトリ移動に失敗しました: %w", err)
 	}
 

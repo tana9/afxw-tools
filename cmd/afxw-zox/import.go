@@ -1,6 +1,7 @@
 package main
 
 import (
+	"context"
 	"fmt"
 	"os"
 	"os/exec"
@@ -9,16 +10,16 @@ import (
 
 	"github.com/tana9/afxw-tools/cmd/afxw-zox/zoxide"
 	"github.com/tana9/afxw-tools/internal/afx"
-	"github.com/tana9/afxw-tools/internal/stringutil"
+	"github.com/tana9/afxw-tools/internal/sliceutil"
 )
 
-func runImport(a afx.AFX) error {
-	dirs, err := a.Histories([]int{afx.WindowLeft, afx.WindowRight})
+func runImport(ctx context.Context, client afx.Client) error {
+	dirs, err := client.DirectoryHistories([]int{afx.WindowLeft, afx.WindowRight})
 	if err != nil {
 		return fmt.Errorf("履歴の取得に失敗しました: %w", err)
 	}
 
-	dirs = stringutil.RemoveDuplicates(dirs)
+	dirs = sliceutil.Unique(dirs)
 
 	if len(dirs) == 0 {
 		fmt.Println("インポートする履歴がありません。")
@@ -37,7 +38,7 @@ func runImport(a afx.AFX) error {
 	}
 	tmpFile.Close()
 
-	zoxCmd := exec.Command(zoxide.ResolveExecutable(), "import", "--from", "z", "--merge", tmpFile.Name())
+	zoxCmd := exec.CommandContext(ctx, zoxide.ResolveExecutable(), "import", "--from", "z", "--merge", tmpFile.Name())
 	zoxCmd.Stdout = os.Stdout
 	zoxCmd.Stderr = os.Stderr
 	if err := zoxCmd.Run(); err != nil {
