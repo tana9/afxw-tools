@@ -1,6 +1,7 @@
 package main
 
 import (
+	"context"
 	"fmt"
 	"os"
 	"os/exec"
@@ -12,7 +13,7 @@ import (
 	"github.com/tana9/afxw-tools/internal/stringutil"
 )
 
-func runImport(a afx.AFX) error {
+func runImport(ctx context.Context, a afx.AFX) error {
 	dirs, err := a.Histories([]int{afx.WindowLeft, afx.WindowRight})
 	if err != nil {
 		return err
@@ -39,7 +40,7 @@ func runImport(a afx.AFX) error {
 		return fmt.Errorf("一時ファイルのクローズに失敗しました: %w", err)
 	}
 
-	zoxCmd := exec.Command(zoxide.ResolveExecutable(), "import", "--from", "z", "--merge", tmpFile.Name())
+	zoxCmd := exec.CommandContext(ctx, zoxide.ResolveExecutable(), "import", "--from", "z", "--merge", tmpFile.Name())
 	zoxCmd.Stdout = os.Stdout
 	zoxCmd.Stderr = os.Stderr
 	if err := zoxCmd.Run(); err != nil {

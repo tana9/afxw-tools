@@ -21,14 +21,14 @@ func main() {
 		Usage:   "あふw用ツールランチャー",
 		Version: version,
 		Action: func(ctx context.Context, cmd *cli.Command) error {
-			return run()
+			return run(ctx)
 		},
 	}
 
 	cliutil.Run(cmd)
 }
 
-func run() error {
+func run(ctx context.Context) error {
 	if err := singleinstance.Acquire("afxw-launcher"); err != nil {
 		return err
 	}
@@ -53,11 +53,13 @@ func run() error {
 		return nil
 	}
 
-	return executeCommand(cfg, cfg.Menu[final.cursor])
+	return executeCommand(ctx, cfg, cfg.Menu[final.cursor])
 }
 
-func executeCommand(cfg *config.Config, item config.MenuItem) error {
-	return executeCommandWith(item, cfg.FindCommand, resolveArgs, runCommand)
+func executeCommand(ctx context.Context, cfg *config.Config, item config.MenuItem) error {
+	return executeCommandWith(item, cfg.FindCommand, resolveArgs, func(path string, args []string) error {
+		return runCommand(ctx, path, args)
+	})
 }
 
 func executeCommandWith(item config.MenuItem, findCommand func(string) (string, error), resolveArgs func([]string) ([]string, error), runCommand func(string, []string) error) error {
@@ -78,8 +80,8 @@ func executeCommandWith(item config.MenuItem, findCommand func(string) (string, 
 	return nil
 }
 
-func runCommand(path string, args []string) error {
-	cmd := exec.Command(path, args...)
+func runCommand(ctx context.Context, path string, args []string) error {
+	cmd := exec.CommandContext(ctx, path, args...)
 	cmd.Stdin = os.Stdin
 	cmd.Stdout = os.Stdout
 	cmd.Stderr = os.Stderr

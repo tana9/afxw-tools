@@ -1,6 +1,7 @@
 package main
 
 import (
+	"context"
 	"errors"
 	"strings"
 	"testing"
@@ -118,7 +119,7 @@ func TestBuildZFormat(t *testing.T) {
 func TestRunImport_HistoriesError(t *testing.T) {
 	afxMock := &afxtest.MockAFX{HistoriesErr: errors.New("history error")}
 
-	err := runImport(afxMock)
+	err := runImport(context.Background(), afxMock)
 	if err == nil {
 		t.Fatal("エラーが期待されましたが、nilが返りました")
 	}
@@ -128,7 +129,7 @@ func TestRunImport_EmptyHistory(t *testing.T) {
 	afxMock := &afxtest.MockAFX{HistoriesResult: []string{}}
 
 	// 履歴が空の場合はzoxideを呼ばずに正常終了する
-	err := runImport(afxMock)
+	err := runImport(context.Background(), afxMock)
 	if err != nil {
 		t.Fatalf("予期しないエラー: %v", err)
 	}

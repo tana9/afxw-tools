@@ -1,6 +1,7 @@
 package config
 
 import (
+	"fmt"
 	"os"
 	"path/filepath"
 	"strings"
@@ -113,8 +114,12 @@ args = []
 func TestLoadFrom(t *testing.T) {
 	tmpDir := t.TempDir()
 	configPath := filepath.Join(tmpDir, "config.toml")
+	toolDir := filepath.Join(tmpDir, "tools")
+	if err := os.Mkdir(toolDir, 0755); err != nil {
+		t.Fatal(err)
+	}
 
-	configContent := `
+	configContent := fmt.Sprintf(`
 [[menu]]
 name = "Test Command"
 description = "Test Description"
@@ -122,8 +127,8 @@ command = "test.exe"
 args = ["--flag"]
 
 [settings]
-tool_dir = "C:\\tools"
-`
+tool_dir = %q
+`, filepath.ToSlash(toolDir))
 
 	if err := os.WriteFile(configPath, []byte(configContent), 0644); err != nil {
 		t.Fatalf("failed to create test config: %v", err)
@@ -146,8 +151,45 @@ tool_dir = "C:\\tools"
 	if len(cfg.Menu[0].Args) != 1 || cfg.Menu[0].Args[0] != "--flag" {
 		t.Errorf("unexpected args: %v", cfg.Menu[0].Args)
 	}
-	if cfg.Settings.ToolDir != `C:\tools` {
-		t.Errorf("expected tool_dir %q, got %q", `C:\tools`, cfg.Settings.ToolDir)
+	if cfg.Settings.ToolDir != filepath.ToSlash(toolDir) {
+		t.Errorf("expected tool_dir %q, got %q", filepath.ToSlash(toolDir), cfg.Settings.ToolDir)
+	}
+}
+
+func TestValidate(t *testing.T) {
+	filePath := filepath.Join(t.TempDir(), "tool.exe")
+	if err := os.WriteFile(filePath, nil, 0644); err != nil {
+		t.Fatal(err)
+	}
+	tests := []struct {
+		name string
+		cfg  Config
+	}{
+		{name: "empty name", cfg: Config{Menu: []MenuItem{{Name: " ", Command: "tool.exe"}}}},
+		{name: "empty command", cfg: Config{Menu: []MenuItem{{Name: "Tool", Command: "\t"}}}},
+		{name: "missing tool dir", cfg: Config{Settings: Settings{ToolDir: filepath.Join(t.TempDir(), "missing")}}},
+		{name: "tool dir is file", cfg: Config{Settings: Settings{ToolDir: filePath}}},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			if err := tt.cfg.Validate(); err == nil {
+				t.Fatal("Validate() error = nil, want error")
+			}
+		})
+	}
+
+	if err := DefaultConfig().Validate(); err != nil {
+		t.Fatalf("DefaultConfig().Validate() error = %v", err)
+	}
+}
+
+func TestLoadFrom_InvalidValue(t *testing.T) {
+	path := filepath.Join(t.TempDir(), "config.toml")
+	if err := os.WriteFile(path, []byte("[[menu]]\nname = \"Tool\"\ncommand = \" \"\n"), 0644); err != nil {
+		t.Fatal(err)
+	}
+	if _, err := LoadFrom(path); err == nil {
+		t.Fatal("LoadFrom() error = nil, want validation error")
 	}
 }
 

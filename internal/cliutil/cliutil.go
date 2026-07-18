@@ -4,46 +4,49 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"io"
 	"os"
 
 	"github.com/urfave/cli/v3"
+	"golang.org/x/term"
 )
 
-// Notice は正常終了扱いだが、終了前にユーザーへ表示してEnter入力を待つ案内メッセージを表します。
-// あふwから起動されたコンソールウィンドウが案内を表示する間もなく閉じるのを防ぐため、
-// コマンドのコアロジックは自分で待機せず Notice を返し、Run が表示と待機を一元的に行います。
-type Notice struct {
-	Message string
-}
+var isTerminal = term.IsTerminal
 
-// Error は error インターフェースを満たすため案内メッセージを返します。
-func (n *Notice) Error() string {
-	return n.Message
-}
+// Notice はユーザーへの案内を表示して正常終了することを表します。
+type Notice struct{ Message string }
 
-// Run はCLIコマンドを実行し、Notice なら案内を表示して正常終了、
-// それ以外のエラーならメッセージを表示して異常終了します。いずれもEnter入力を待ってから終了します。
+// Error は案内メッセージを返します。
+func (n *Notice) Error() string { return n.Message }
+
+// Run はCLIコマンドを実行し、エラー時にメッセージを表示して終了します。
 func Run(cmd *cli.Command) {
-	err := cmd.Run(context.Background(), os.Args)
-	if err == nil {
-		return
+	if err := cmd.Run(context.Background(), os.Args); err != nil {
+		var notice *Notice
+		if errors.As(err, &notice) {
+			reportNotice(notice.Message, os.Stdin, os.Stdout, isTerminal(int(os.Stdin.Fd())))
+			return
+		}
+		reportError(err, os.Stdin, os.Stderr, isTerminal(int(os.Stdin.Fd())))
+		os.Exit(1)
 	}
-
-	var notice *Notice
-	if errors.As(err, &notice) {
-		fmt.Println(notice.Message)
-		WaitForEnter()
-		return
-	}
-
-	fmt.Fprintf(os.Stderr, "エラー: %v\n", err)
-	WaitForEnter()
-	os.Exit(1)
 }
 
-// WaitForEnter は案内を表示してEnterキーの入力を待ちます。
-// あふwから起動されたコンソールウィンドウがメッセージ表示直後に閉じて読めなくなるのを防ぐために使います。
-func WaitForEnter() {
-	fmt.Fprintln(os.Stderr, "Enterキーを押すと終了します...")
-	_, _ = fmt.Scanln()
+func reportNotice(message string, stdin io.Reader, stdout io.Writer, interactive bool) {
+	_, _ = fmt.Fprintln(stdout, message)
+	if !interactive {
+		return
+	}
+	_, _ = fmt.Fprintln(stdout, "Enterキーを押すと終了します...")
+	_, _ = fmt.Fscanln(stdin)
+}
+
+func reportError(err error, stdin io.Reader, stderr io.Writer, interactive bool) {
+	_, _ = fmt.Fprintf(stderr, "エラー: %v\n", err)
+	if !interactive {
+		return
+	}
+
+	_, _ = fmt.Fprintln(stderr, "何かキーを押すと終了します...")
+	_, _ = fmt.Fscanln(stdin)
 }

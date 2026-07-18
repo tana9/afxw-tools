@@ -1,11 +1,24 @@
 package zoxide
 
 import (
+	"context"
+	"errors"
 	"fmt"
 	"os"
 	"path/filepath"
+	"reflect"
 	"testing"
 )
+
+func TestQueryWithCanceledContext(t *testing.T) {
+	ctx, cancel := context.WithCancel(context.Background())
+	cancel()
+
+	_, err := queryWith(ctx, "cmd.exe")
+	if !errors.Is(err, context.Canceled) {
+		t.Fatalf("queryWith() error = %v, want context.Canceled", err)
+	}
+}
 
 func makeTestDirs(t *testing.T, names ...string) []string {
 	t.Helper()
@@ -21,94 +34,52 @@ func makeTestDirs(t *testing.T, names ...string) []string {
 	return paths
 }
 
-func TestParseQueryOutput_Normal(t *testing.T) {
-	dirs := makeTestDirs(t, "a", "b")
-	input := fmt.Sprintf("12.5 %s\n10.0 %s\n", dirs[0], dirs[1])
-
-	got, err := parseQueryOutput(input)
-	if err != nil {
-		t.Fatalf("unexpected error: %v", err)
-	}
-	if len(got) != 2 {
-		t.Fatalf("expected 2 entries, got %d", len(got))
-	}
-	if got[0].Path != dirs[0] || got[0].Score != 12.5 {
-		t.Errorf("entry[0]: got {%s, %v}, want {%s, 12.5}", got[0].Path, got[0].Score, dirs[0])
-	}
-	if got[1].Path != dirs[1] || got[1].Score != 10.0 {
-		t.Errorf("entry[1]: got {%s, %v}, want {%s, 10.0}", got[1].Path, got[1].Score, dirs[1])
-	}
-}
-
-func TestParseQueryOutput_PathWithSpaces(t *testing.T) {
-	dirs := makeTestDirs(t, "my folder", "another path")
-	input := fmt.Sprintf("15.0 %s\n8.5 %s\n", dirs[0], dirs[1])
-
-	got, err := parseQueryOutput(input)
-	if err != nil {
-		t.Fatalf("unexpected error: %v", err)
-	}
-	if len(got) != 2 {
-		t.Fatalf("expected 2 entries, got %d", len(got))
-	}
-	if got[0].Path != dirs[0] {
-		t.Errorf("expected %q, got %q", dirs[0], got[0].Path)
-	}
-}
-
-func TestParseQueryOutput_PreservesNonExistentPaths(t *testing.T) {
-	dirs := makeTestDirs(t, "exists")
+func TestParseQueryOutput(t *testing.T) {
+	dirs := makeTestDirs(t, "a", "b", "my folder", "another path")
 	nonExistent := filepath.Join(t.TempDir(), "no_such_dir")
-	input := fmt.Sprintf("20.0 %s\n5.0 %s\n", dirs[0], nonExistent)
+	tests := []struct {
+		name  string
+		input string
+		want  []Entry
+	}{
+		{
+			name:  "normal",
+			input: fmt.Sprintf("12.5 %s\n10.0 %s\n", dirs[0], dirs[1]),
+			want:  []Entry{{Path: dirs[0], Score: 12.5}, {Path: dirs[1], Score: 10}},
+		},
+		{
+			name:  "paths with spaces",
+			input: fmt.Sprintf("15.0 %s\n8.5 %s\n", dirs[2], dirs[3]),
+			want:  []Entry{{Path: dirs[2], Score: 15}, {Path: dirs[3], Score: 8.5}},
+		},
+		{
+			name:  "nonexistent path preserved",
+			input: fmt.Sprintf("20.0 %s\n", nonExistent),
+			want:  []Entry{{Path: nonExistent, Score: 20}},
+		},
+		{name: "empty", input: "", want: nil},
+		{
+			name:  "blank lines skipped",
+			input: fmt.Sprintf("12.5 %s\n\n10.0 %s\n", dirs[0], dirs[1]),
+			want:  []Entry{{Path: dirs[0], Score: 12.5}, {Path: dirs[1], Score: 10}},
+		},
+		{
+			name:  "invalid lines skipped",
+			input: fmt.Sprintf("notanumber %s\n10.0 %s\n", dirs[0], dirs[0]),
+			want:  []Entry{{Path: dirs[0], Score: 10}},
+		},
+	}
 
-	got, err := parseQueryOutput(input)
-	if err != nil {
-		t.Fatalf("unexpected error: %v", err)
-	}
-	if len(got) != 2 {
-		t.Fatalf("expected 2 entries, got %d", len(got))
-	}
-	if got[0].Path != dirs[0] {
-		t.Errorf("expected %q, got %q", dirs[0], got[0].Path)
-	}
-	if got[1].Path != nonExistent {
-		t.Errorf("expected %q, got %q", nonExistent, got[1].Path)
-	}
-}
-
-func TestParseQueryOutput_Empty(t *testing.T) {
-	got, err := parseQueryOutput("")
-	if err != nil {
-		t.Fatalf("unexpected error: %v", err)
-	}
-	if len(got) != 0 {
-		t.Errorf("expected empty result, got %d entries", len(got))
-	}
-}
-
-func TestParseQueryOutput_BlankLinesSkipped(t *testing.T) {
-	dirs := makeTestDirs(t, "x", "y")
-	input := fmt.Sprintf("12.5 %s\n\n10.0 %s\n", dirs[0], dirs[1])
-
-	got, err := parseQueryOutput(input)
-	if err != nil {
-		t.Fatalf("unexpected error: %v", err)
-	}
-	if len(got) != 2 {
-		t.Errorf("expected 2 entries, got %d", len(got))
-	}
-}
-
-func TestParseQueryOutput_InvalidLinesSkipped(t *testing.T) {
-	dirs := makeTestDirs(t, "valid")
-	input := fmt.Sprintf("notanumber %s\n10.0 %s\n", dirs[0], dirs[0])
-
-	got, err := parseQueryOutput(input)
-	if err != nil {
-		t.Fatalf("unexpected error: %v", err)
-	}
-	if len(got) != 1 {
-		t.Errorf("expected 1 entry (invalid score line skipped), got %d", len(got))
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			got, err := parseQueryOutput(tt.input)
+			if err != nil {
+				t.Fatalf("parseQueryOutput() error = %v", err)
+			}
+			if !reflect.DeepEqual(got, tt.want) {
+				t.Errorf("parseQueryOutput() = %#v, want %#v", got, tt.want)
+			}
+		})
 	}
 }
 

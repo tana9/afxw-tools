@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"os"
 	"path/filepath"
+	"strings"
 
 	"github.com/tana9/afxw-tools/internal/cmdutil"
 	"github.com/tana9/afxw-tools/internal/configutil"
@@ -29,8 +30,28 @@ func DefaultConfig() *Config {
 	}
 }
 
+// Validate checks values that would otherwise fail only when a program is used.
+func (c *Config) Validate() error {
+	for i, program := range c.Programs {
+		if strings.TrimSpace(program.Name) == "" {
+			return fmt.Errorf("program[%d].name が空です", i)
+		}
+		if strings.TrimSpace(program.Command) == "" {
+			return fmt.Errorf("program[%d].command が空です", i)
+		}
+	}
+	return nil
+}
+
 func LoadFrom(path string) (*Config, error) {
-	return configutil.LoadFrom[Config](path)
+	cfg, err := configutil.LoadFrom[Config](path)
+	if err != nil {
+		return nil, err
+	}
+	if err := cfg.Validate(); err != nil {
+		return nil, fmt.Errorf("設定ファイル %q が不正です: %w", path, err)
+	}
+	return cfg, nil
 }
 
 func Load() (*Config, error) {

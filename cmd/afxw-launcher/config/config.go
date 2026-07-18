@@ -1,6 +1,10 @@
 package config
 
 import (
+	"fmt"
+	"os"
+	"strings"
+
 	"github.com/tana9/afxw-tools/internal/cmdutil"
 )
 
@@ -31,6 +35,31 @@ func DefaultConfig() *Config {
 		},
 		Settings: Settings{ToolDir: ""},
 	}
+}
+
+// Validate checks values that would otherwise fail only when a menu is used.
+func (c *Config) Validate() error {
+	for i, item := range c.Menu {
+		if strings.TrimSpace(item.Name) == "" {
+			return fmt.Errorf("menu[%d].name が空です", i)
+		}
+		if strings.TrimSpace(item.Command) == "" {
+			return fmt.Errorf("menu[%d].command が空です", i)
+		}
+	}
+
+	toolDir := strings.TrimSpace(c.Settings.ToolDir)
+	if toolDir == "" {
+		return nil
+	}
+	info, err := os.Stat(toolDir)
+	if err != nil {
+		return fmt.Errorf("settings.tool_dir %q を確認できません: %w", c.Settings.ToolDir, err)
+	}
+	if !info.IsDir() {
+		return fmt.Errorf("settings.tool_dir %q はディレクトリではありません", c.Settings.ToolDir)
+	}
+	return nil
 }
 
 func (c *Config) FindCommand(command string) (string, error) {

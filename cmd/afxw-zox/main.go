@@ -41,9 +41,11 @@ func main() {
 			defer a.Close()
 
 			if importHistory {
-				return runImport(a)
+				return runImport(ctx, a)
 			}
-			return run(a, &finder.FuzzyFinder{}, zoxide.Query)
+			return run(a, &finder.FuzzyFinder{}, func() ([]zoxide.Entry, error) {
+				return zoxide.Query(ctx)
+			})
 		},
 	}
 

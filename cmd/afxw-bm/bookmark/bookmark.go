@@ -6,9 +6,12 @@ import (
 	"os"
 	"path/filepath"
 	"strings"
+	"sync"
 
 	"github.com/tana9/afxw-tools/internal/stringutil"
 )
+
+var addMu sync.Mutex
 
 func GetDefaultPath() (string, error) {
 	exe, err := os.Executable()
@@ -62,6 +65,9 @@ func parseLines(data string) []string {
 // Add はパスを正規化してブックマークファイルへ追記します。
 // 既存エントリと大文字小文字を無視して重複する場合は何もしません。
 func Add(path string, newItem string) error {
+	addMu.Lock()
+	defer addMu.Unlock()
+
 	// Windowsでの一貫性のため、パス区切り文字をバックスラッシュに正規化します
 	newItem = filepath.Clean(newItem)
 

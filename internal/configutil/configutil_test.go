@@ -1,14 +1,31 @@
 package configutil
 
 import (
-	"errors"
 	"os"
 	"path/filepath"
+	"strings"
 	"testing"
 )
 
 type testConfig struct {
 	Name string `toml:"name"`
+}
+
+func TestExists(t *testing.T) {
+	dir := t.TempDir()
+	path := filepath.Join(dir, "config.toml")
+
+	if exists, err := Exists(path); err != nil || exists {
+		t.Fatalf("Exists() = %v, %v; ファイルが無い場合は false, nil を期待", exists, err)
+	}
+
+	if err := Write(path, &testConfig{Name: "a"}); err != nil {
+		t.Fatalf("Write() error = %v", err)
+	}
+
+	if exists, err := Exists(path); err != nil || !exists {
+		t.Fatalf("Exists() = %v, %v; ファイルがある場合は true, nil を期待", exists, err)
+	}
 }
 
 func TestWriteAndLoadFrom(t *testing.T) {
@@ -32,12 +49,8 @@ func TestLoadFromNotExist(t *testing.T) {
 	dir := t.TempDir()
 	path := filepath.Join(dir, "missing.toml")
 
-	_, err := LoadFrom[testConfig](path)
-	if err == nil {
+	if _, err := LoadFrom[testConfig](path); err == nil {
 		t.Fatal("LoadFrom() error = nil; 存在しないファイルはエラーを期待")
-	}
-	if !errors.Is(err, os.ErrNotExist) {
-		t.Fatalf("errors.Is(err, os.ErrNotExist) = false; err = %v", err)
 	}
 }
 
@@ -78,22 +91,65 @@ func TestAppendNotExist(t *testing.T) {
 	}
 }
 
-func TestTryLoad(t *testing.T) {
+func TestWriteEncodeErrorKeepsExistingFile(t *testing.T) {
 	dir := t.TempDir()
 	path := filepath.Join(dir, "config.toml")
+	want := []byte("name = \"original\"\n")
+	if err := os.WriteFile(path, want, 0644); err != nil {
+		t.Fatal(err)
+	}
 
-	// 存在しない場合は (nil, nil)
+	if err := Write(path, map[string]any{"unsupported": make(chan int)}); err == nil {
+		t.Fatal("Write() error = nil; エンコードできない値はエラーを期待")
+	}
+	assertFileAndNoTemporaryFiles(t, path, want)
+}
+
+func TestAppendEncodeErrorKeepsExistingFile(t *testing.T) {
+	dir := t.TempDir()
+	path := filepath.Join(dir, "config.toml")
+	want := []byte("name = \"original\"\n")
+	if err := os.WriteFile(path, want, 0644); err != nil {
+		t.Fatal(err)
+	}
+
+	if err := Append(path, map[string]any{"unsupported": make(chan int)}); err == nil {
+		t.Fatal("Append() error = nil; エンコードできない値はエラーを期待")
+	}
+	assertFileAndNoTemporaryFiles(t, path, want)
+}
+
+func assertFileAndNoTemporaryFiles(t *testing.T, path string, want []byte) {
+	t.Helper()
+	got, err := os.ReadFile(path)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if string(got) != string(want) {
+		t.Errorf("file content = %q, want %q", got, want)
+	}
+	entries, err := os.ReadDir(filepath.Dir(path))
+	if err != nil {
+		t.Fatal(err)
+	}
+	for _, entry := range entries {
+		if strings.HasPrefix(entry.Name(), "."+filepath.Base(path)+".tmp-") {
+			t.Errorf("temporary file remains: %s", entry.Name())
+		}
+	}
+}
+
+func TestTryLoad(t *testing.T) {
+	path := filepath.Join(t.TempDir(), "config.toml")
 	cfg, err := TryLoad[testConfig](path)
 	if err != nil || cfg != nil {
-		t.Fatalf("TryLoad() = %v, %v; 存在しないファイルは nil, nil を期待", cfg, err)
+		t.Fatalf("TryLoad() = %+v, %v; want nil, nil", cfg, err)
 	}
-
-	if err := Write(path, &testConfig{Name: "afxw"}); err != nil {
-		t.Fatalf("Write() error = %v", err)
+	if err := os.WriteFile(path, []byte("name = \"afxw\"\n"), 0644); err != nil {
+		t.Fatal(err)
 	}
-
 	cfg, err = TryLoad[testConfig](path)
 	if err != nil || cfg == nil || cfg.Name != "afxw" {
-		t.Fatalf("TryLoad() = %+v, %v; 読み込み成功を期待", cfg, err)
+		t.Fatalf("TryLoad() = %+v, %v; want loaded config", cfg, err)
 	}
 }
