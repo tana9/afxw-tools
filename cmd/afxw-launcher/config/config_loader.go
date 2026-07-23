@@ -6,6 +6,7 @@ import (
 	"path/filepath"
 	"strings"
 
+	"github.com/tana9/afxw-tools/internal/cliutil"
 	"github.com/tana9/afxw-tools/internal/cmdutil"
 	"github.com/tana9/afxw-tools/internal/configutil"
 )
@@ -75,7 +76,9 @@ func migrateUserConfig(path string, cfg *Config) (*Config, error) {
 	if err := appendMenuItems(path, items); err != nil {
 		return nil, fmt.Errorf("設定ファイルの更新に失敗しました: %w", err)
 	}
-	_, _ = fmt.Fprintf(os.Stderr, "設定ファイルに不足していた標準メニューを追加しました: %s\n", path)
+	// Enter入力を待ってから返すことで、直後に始まるTUI描画に案内メッセージが埋もれて
+	// 見逃されるのを防ぐ。
+	cliutil.PressEnterToContinue(fmt.Sprintf("設定ファイルに不足していた標準メニューを追加しました: %s", path))
 	return cfg, nil
 }
 

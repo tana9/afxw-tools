@@ -41,6 +41,21 @@ func reportNotice(message string, stdin io.Reader, stdout io.Writer, interactive
 	_, _ = fmt.Fscanln(stdin)
 }
 
+// PressEnterToContinue はメッセージを表示し、対話端末であればEnterキーの入力を待ってから処理を継続します。
+// TUI描画等の後続処理に案内メッセージが上書きされて読めなくなるのを防ぐためのヘルパーです。
+func PressEnterToContinue(message string) {
+	pressEnterToContinue(message, os.Stdin, os.Stdout, isTerminal(int(os.Stdin.Fd())))
+}
+
+func pressEnterToContinue(message string, stdin io.Reader, stdout io.Writer, interactive bool) {
+	_, _ = fmt.Fprintln(stdout, message)
+	if !interactive {
+		return
+	}
+	_, _ = fmt.Fprintln(stdout, "Enterキーを押すと続行します...")
+	_, _ = fmt.Fscanln(stdin)
+}
+
 func reportError(err error, stdin io.Reader, stderr io.Writer, interactive bool) {
 	_, _ = fmt.Fprintf(stderr, "エラー: %v\n", err)
 	if !interactive {
