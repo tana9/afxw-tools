@@ -8,6 +8,7 @@ import (
 	"path/filepath"
 )
 
+// atomicWrite は一時ファイルに書き込んでから元のファイルに置換することで、書き込みエラー時にファイル破損を防ぎます。
 func atomicWrite(path string, write func(io.Writer) error) error {
 	tmp, tmpPath, err := createTempFile(path)
 	if err != nil {
@@ -27,6 +28,7 @@ func atomicWrite(path string, write func(io.Writer) error) error {
 	return nil
 }
 
+// createTempFile はpath と同じディレクトリに一時ファイルを作成し、既存ファイルが存在する場合はその権限をコピーします。
 func createTempFile(path string) (*os.File, string, error) {
 	dir := filepath.Dir(path)
 	tmp, err := os.CreateTemp(dir, "."+filepath.Base(path)+".tmp-*")
@@ -50,6 +52,7 @@ func createTempFile(path string) (*os.File, string, error) {
 	return tmp, tmpPath, nil
 }
 
+// syncAndClose はファイルの内容をディスクに同期してからファイルをクローズします。
 func syncAndClose(file *os.File) error {
 	if err := file.Sync(); err != nil {
 		return fmt.Errorf("一時ファイルの同期に失敗しました: %w", err)
@@ -60,6 +63,7 @@ func syncAndClose(file *os.File) error {
 	return nil
 }
 
+// cleanupTempFile は一時ファイルをクローズして削除します。エラーは無視されます。
 func cleanupTempFile(file *os.File, path string) {
 	_ = file.Close()
 	_ = os.Remove(path)

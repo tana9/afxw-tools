@@ -38,7 +38,7 @@ func DefaultConfig() *Config {
 	}
 }
 
-// Validate checks values that would otherwise fail only when a menu is used.
+// Validate は、メニューを実際に使ったときにしか判明しない不正な値がないかを検証します。
 func (c *Config) Validate() error {
 	for i, item := range c.Menu {
 		if strings.TrimSpace(item.Name) == "" {

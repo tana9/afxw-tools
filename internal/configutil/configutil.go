@@ -10,17 +10,6 @@ import (
 	"github.com/BurntSushi/toml"
 )
 
-// Exists は指定パスの設定ファイルが存在するかどうかを返します。
-// 存在確認自体が失敗した場合（権限エラー等、ファイル不在以外）はエラーを返します。
-func Exists(path string) (bool, error) {
-	if _, err := os.Stat(path); err == nil {
-		return true, nil
-	} else if !errors.Is(err, os.ErrNotExist) {
-		return false, fmt.Errorf("設定ファイルの確認に失敗しました (%s): %w", path, err)
-	}
-	return false, nil
-}
-
 // LoadFrom は指定パスのTOMLファイルをデコードして T の値を返します。
 func LoadFrom[T any](path string) (*T, error) {
 	var cfg T

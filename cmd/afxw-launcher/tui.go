@@ -12,11 +12,11 @@ import (
 var (
 	titleStyle = lipgloss.NewStyle().
 			Bold(true).
-			Foreground(lipgloss.Color("170")).
+			Foreground(lipgloss.AdaptiveColor{Light: "5", Dark: "170"}).
 			MarginBottom(1)
 
 	selectedStyle = lipgloss.NewStyle().
-			Foreground(lipgloss.Color("170")).
+			Foreground(lipgloss.AdaptiveColor{Light: "5", Dark: "170"}).
 			Bold(true).
 			PaddingLeft(2)
 
@@ -24,11 +24,11 @@ var (
 			PaddingLeft(2)
 
 	descStyle = lipgloss.NewStyle().
-			Foreground(lipgloss.Color("241")).
+			Foreground(lipgloss.AdaptiveColor{Light: "243", Dark: "241"}).
 			PaddingLeft(4)
 
 	helpStyle = lipgloss.NewStyle().
-			Foreground(lipgloss.Color("241")).
+			Foreground(lipgloss.AdaptiveColor{Light: "243", Dark: "241"}).
 			MarginTop(1)
 )
 
@@ -98,8 +98,10 @@ func (m model) View() string {
 			sb.WriteString(normalStyle.Render(fmt.Sprintf("%s %d. %s", cursor, i+1, item.Name)))
 		}
 		sb.WriteString("\n")
-		sb.WriteString(descStyle.Render(item.Description))
-		sb.WriteString("\n")
+		if strings.TrimSpace(item.Description) != "" {
+			sb.WriteString(descStyle.Render(item.Description))
+			sb.WriteString("\n")
+		}
 	}
 
 	sb.WriteString("\n")

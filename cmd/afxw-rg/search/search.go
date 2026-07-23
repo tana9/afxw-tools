@@ -24,6 +24,9 @@ const (
 	EncodingSJIS     = "sjis"
 	EncodingShiftJIS = "shift_jis"
 	maxBatchSize     = 20_000
+	// classifySampleSize は文字コード判定でファイル先頭から読む上限バイト数。
+	// ファイル全体を読むと大きなツリーでripgrep本体より判定処理が支配的になるため、サンプリングに留める。
+	classifySampleSize = 64 * 1024
 )
 
 // Options は検索条件を表します。
@@ -156,7 +159,8 @@ func classifyFiles(root string, files []string) ([]string, []string, error) {
 	return utf8Files, sjisFiles, nil
 }
 
-// isUTF8File はファイル全体が妥当なUTF-8かをストリーミングで判定します。
+// isUTF8File はファイル先頭 classifySampleSize バイトが妥当なUTF-8かをストリーミングで判定します。
+// サンプル内に不正なバイト列が無ければUTF-8として扱います(先頭で判定できない稀なケースはrg側の検索結果が乱れる程度に留まる)。
 func isUTF8File(path string) (bool, error) {
 	f, err := os.Open(path)
 	if err != nil {
@@ -165,7 +169,8 @@ func isUTF8File(path string) (bool, error) {
 	defer func() { _ = f.Close() }()
 
 	r := bufio.NewReader(f)
-	for {
+	read := 0
+	for read < classifySampleSize {
 		rn, size, err := r.ReadRune()
 		if errors.Is(err, io.EOF) {
 			return true, nil
@@ -176,7 +181,9 @@ func isUTF8File(path string) (bool, error) {
 		if rn == utf8.RuneError && size == 1 {
 			return false, nil
 		}
+		read += size
 	}
+	return true, nil
 }
 
 // batches はWindowsのコマンドライン長を超えないようファイル一覧を分割します。

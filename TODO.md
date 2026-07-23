@@ -90,6 +90,62 @@
   CLAUDE.md「Add a Japanese comment for every function, including unexported functions」に対し、`bookmark.Add`(bookmark.go:62)、`loadExistingConfig`(config_loader.go:49)、`load`(afxw-open/config/config.go:47)がコメント無し(3箇所とも確認済み)。特にAddは正規化・重複判定・末尾改行と挙動が変わったのに説明が無い。
   対応: `bookmark.Add`・launcher/openの `load` に日本語docコメントを追加(loadExistingConfigは削除により対象外)。Notice/Connect/TryLoad/RemoveDuplicatesBy等の新規関数にも規約どおりコメントを付与。
 
+## コードレビュー第4弾(2026-07-23)
+
+パフォーマンス・UI/UX観点の全体レビューで洗い出した項目。パフォーマンスは短命な対話型CLIでデータ量も小さく、既対応(zoxideキャッシュ等)以上の最適化は不要と再確認。1と2は未コミットの `wtMenuItem()` 追加をコミットする前に対応すべき。
+
+- [x] **[warning] `wtMenuItem()` 追加でlauncher configのテストが失敗する**
+  未コミット変更で `DefaultConfig()` のメニューが6件になったが、テストは5件を期待しており `go test ./...` が失敗していた。
+  対応: 上流(origin/master)で同等機能が `standardMenuItems()` + 更新済みテストとして実装されたため、ローカル変更はstashに退避して破棄扱い(2026-07-23)。
+
+- [x] **[warning] 既存ユーザー設定に「Windows Terminalを開く」が移行されない**
+  対応: 上流の `addMissingStandardMenuItems`(config_loader.go)が標準メニューリスト(`standardMenuItems()`)に対する汎用移行として実装済み。wt/rg/diffも同機構で移行される(2026-07-23確認)。
+
+- [x] **[warning] スペースを含むパスで `{files}` が黙って壊れる**
+  `$MFP` のスペース区切りパースが原因で、スペースを含むパスが分断されていた。
+  対応: 上流で `$JU$MF`(改行区切り)マクロによるパースに変更され解消(internal/afx/afx.go `getMarkedFiles`/`parseMarkedFiles`、2026-07-23確認)。
+
+- [x] **[suggestion] 重複ブックマーク追加時も「追加しました」と表示される**
+  対応: 第5弾(135行目)で対応済み。`bookmark.Add` が `(added bool, err error)` を返すよう変更し、`addBookmark` で出し分け(2026-07-23)。
+
+- [x] **[suggestion] launcher TUIの細かなUI改善**
+  - [x] `Description` が空の項目でも `descStyle` の行を無条件描画するため空行が入る問題。
+    対応: `strings.TrimSpace(item.Description) != ""` の場合のみ描画するよう修正(`tui.go` View、2026-07-23)。
+  - [x] 色が `170`/`241` 固定でライトテーマの端末ではhelp/descriptionが読みにくい問題。
+    対応: `lipgloss.AdaptiveColor{Light: ..., Dark: ...}` に置き換え、ライト/ダーク両テーマに対応(2026-07-23)。
+  - [ ] メニュー10件以上は数字キーで選択不可(現状6件で実害なし。増やす場合に注意。対応不要と判断し据え置き)。
+  - [ ] 起動時の移行メッセージ(`config_loader.go` migrateUserConfig)は直後にTUI描画が始まり見逃されやすい(Notice機構への統合は表示フローの再設計が必要なため未着手)。
+
+- [x] **[suggestion] あふw未起動時のエラーメッセージが不親切**
+  対応: `afx.Connect` のエラーメッセージに「（あふwが起動しているか確認してください）」を追記(`internal/afx/afx.go`、2026-07-23)。
+
+## コードレビュー第5弾(2026-07-23) — origin/master取り込み分(ed3f08a..12b9349)のレビュー
+
+afxw-rg/afxw-diffの新規追加、標準メニュー移行の汎用化、`$JU$MF` による空白パス問題の解消、設定ファイルのアトミック書き込み、cliutilのTTY判定、e2eテスト追加など大きな改善を確認。`go build`/`go vet`/`go test ./...` は全通過。その上で以下を検出。
+
+- [x] **[warning] `Validate()` が実行時に一度も呼ばれない(launcher/openとも)**
+  `load()` が `configutil.TryLoad[Config]` を直接呼ぶため、`Validate` を実行するパッケージ側 `LoadFrom` ラッパーを経由せず、実際の起動時にはバリデーションが一切効いていなかった。
+  対応: `tryLoadValidated(path)` ヘルパー(TryLoad成功時に `cfg.Validate()` を呼び、失敗時は `設定ファイル %q が不正です` でラップ)を launcher/open それぞれの `load()` から使うよう変更。既存の `LoadFrom`(未存在時はエラーにする版)はそのまま。`tool_dir` 不正も含めて起動時ハードエラーとする方針とした(FindCommandのフォールバックがあるとはいえ、ユーザー設定ミスは早期に気付けた方が良いと判断)。既存テストへの影響が無いことを確認済み(load()で意味的に不正だが構文的に正しいTOMLをテストしている箇所は無かった)。`go build`/`go test` で回帰無し(2026-07-23)。
+
+- [x] **[warning] `reportError` の「何かキーを押すと終了します...」が第2弾で修正した文言バグの再発**
+  対応: `internal/cliutil/cliutil.go` の `reportError` を「Enterキーを押すと終了します...」に修正し、`reportNotice` と表現を統一。`cliutil_test.go` の期待値も更新。`go test ./internal/cliutil/...` で確認済み(2026-07-23)。
+
+- [x] **[suggestion] デッドコード2件: `configutil.Exists` の再追加と `internal/sliceutil` の重複**
+  対応: `configutil.Exists`(呼び出し元なし)とそのテストを削除。`internal/sliceutil` パッケージ(`Unique`が`stringutil.RemoveDuplicates`と重複、自テスト以外に利用者なし)を丸ごと削除。あわせて `internal/configutil/atomic.go` のunexported関数(`atomicWrite`/`createTempFile`/`syncAndClose`/`cleanupTempFile`)に日本語docコメントを追加。`go build ./...`/`go test ./...` で全体の回帰無しを確認済み(2026-07-23)。
+
+- [x] **[suggestion] `bookmark.Add` が重複時も「追加しました」と表示される**
+  `Add` は重複時に何もせず `nil` を返すが、`addBookmark` は無条件に「追加しました」と表示していた。
+  対応: `Add` のシグネチャを `(added bool, err error)` に変更し、重複時は `false, nil`、新規追加時は `true, nil` を返すように変更。`cmd/afxw-bm/main.go` の `addBookmark` は `added` で「ブックマークに追加しました」/「既に登録されています」を出し分け。呼び出し元テスト(`TestAdd`/`TestAddConcurrentDuplicate`/`TestAdd_UnicodeCaseFold`)も新シグネチャに追随。`go test ./cmd/afxw-bm/...` で確認済み(2026-07-23)。
+
+- [x] **[verified] `bookmark.Add` の `addMu` ミューテックスは実は必要 — 削除提案はREFUTED**
+  当初「`Add`はプロセスあたり1回しか呼ばれないため`addMu`は実効性が無い」と判断したが、`cmd/afxw-bm/bookmark/bookmark_test.go` の `TestAddConcurrentDuplicate`(20 goroutineから同一パスを並行`Add`し、最終的に1件のみ残ることを検証)が既に同一プロセス内の並行呼び出し安全性を仕様として要求していることを確認した。`addMu`を削除するとこのテストが指す競合(check-then-write間のレース)が再発するため、削除は誤り。プロセス間排他ではなくプロセス内goroutine安全性のためのミューテックスとして意図通り機能しており、対応不要と判定(2026-07-23)。
+
+- [x] **[suggestion] afxw-rg autoモードは全ファイルを全量読みして文字コード判定するため大きいツリーで遅い**
+  対応: `isUTF8File` を先頭 `classifySampleSize`(64KiB)までのサンプリング判定に変更。サンプル内で不正バイト列が見つからなければUTF-8として扱う。既存テストのファイルはいずれもサンプルサイズ未満のため挙動は変わらず、`go test ./cmd/afxw-rg/...` で確認済み(2026-07-23)。
+
+- [x] **[suggestion] `Validate` のdocコメントが英語(CLAUDE.md規約違反)**
+  対応: launcher/open両方の `Validate` docコメントを日本語に書き換え。`atomic.go` のコメント追加は上記デッドコード削除の対応に含めて実施(2026-07-23)。
+
 ## Go 1.26スタイルチェック
 
 - `internal/afx/afx.go` の古典的カウントループを `for i := range count` に置き換え済み(上記参照)。

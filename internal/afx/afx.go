@@ -74,7 +74,7 @@ func NewOleAFX() (AFX, error) {
 func Connect() (AFX, error) {
 	a, err := NewOleAFX()
 	if err != nil {
-		return nil, fmt.Errorf("afxw.objへの接続に失敗しました: %w", err)
+		return nil, fmt.Errorf("afxw.objへの接続に失敗しました（あふwが起動しているか確認してください）: %w", err)
 	}
 	return a, nil
 }

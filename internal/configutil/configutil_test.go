@@ -11,23 +11,6 @@ type testConfig struct {
 	Name string `toml:"name"`
 }
 
-func TestExists(t *testing.T) {
-	dir := t.TempDir()
-	path := filepath.Join(dir, "config.toml")
-
-	if exists, err := Exists(path); err != nil || exists {
-		t.Fatalf("Exists() = %v, %v; ファイルが無い場合は false, nil を期待", exists, err)
-	}
-
-	if err := Write(path, &testConfig{Name: "a"}); err != nil {
-		t.Fatalf("Write() error = %v", err)
-	}
-
-	if exists, err := Exists(path); err != nil || !exists {
-		t.Fatalf("Exists() = %v, %v; ファイルがある場合は true, nil を期待", exists, err)
-	}
-}
-
 func TestWriteAndLoadFrom(t *testing.T) {
 	dir := t.TempDir()
 	path := filepath.Join(dir, "nested", "config.toml")

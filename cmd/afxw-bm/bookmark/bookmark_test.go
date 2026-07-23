@@ -88,7 +88,7 @@ func TestAdd(t *testing.T) {
 		t.Run(tt.name, func(t *testing.T) {
 			path := filepath.Join(t.TempDir(), "bookmarks.txt")
 			for _, item := range tt.items {
-				if err := Add(path, item); err != nil {
+				if _, err := Add(path, item); err != nil {
 					t.Fatalf("Add(%q) error = %v", item, err)
 				}
 			}
@@ -114,7 +114,8 @@ func TestAddConcurrentDuplicate(t *testing.T) {
 		wg.Add(1)
 		go func() {
 			defer wg.Done()
-			errCh <- Add(path, item)
+			_, err := Add(path, item)
+			errCh <- err
 		}()
 	}
 	wg.Wait()
@@ -139,10 +140,10 @@ func TestAdd_UnicodeCaseFold(t *testing.T) {
 
 	// U+0130(İ)はstrings.ToLowerでは"i"になるがstrings.EqualFoldでは"i"と一致しない。
 	// LoadのdedupとAddの重複チェックが同じ正規化キー(normKey)を使うことを保証する。
-	if err := Add(path, `C:\Users\Test\Dİr1`); err != nil {
+	if _, err := Add(path, `C:\Users\Test\Dİr1`); err != nil {
 		t.Fatal(err)
 	}
-	if err := Add(path, `C:\Users\Test\Dir1`); err != nil {
+	if _, err := Add(path, `C:\Users\Test\Dir1`); err != nil {
 		t.Fatal(err)
 	}
 

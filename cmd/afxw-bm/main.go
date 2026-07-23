@@ -82,11 +82,16 @@ func addBookmark(path string) error {
 		return fmt.Errorf("ブックマークファイルのパス取得に失敗しました: %w", err)
 	}
 
-	if err := bookmark.Add(bmPath, absPath); err != nil {
+	added, err := bookmark.Add(bmPath, absPath)
+	if err != nil {
 		return err
 	}
 
-	fmt.Printf("ブックマークに追加しました: %s\n", absPath)
+	if added {
+		fmt.Printf("ブックマークに追加しました: %s\n", absPath)
+	} else {
+		fmt.Printf("既に登録されています: %s\n", absPath)
+	}
 	return nil
 }
 

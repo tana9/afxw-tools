@@ -47,6 +47,6 @@ func reportError(err error, stdin io.Reader, stderr io.Writer, interactive bool)
 		return
 	}
 
-	_, _ = fmt.Fprintln(stderr, "何かキーを押すと終了します...")
+	_, _ = fmt.Fprintln(stderr, "Enterキーを押すと終了します...")
 	_, _ = fmt.Fscanln(stdin)
 }

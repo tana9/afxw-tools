@@ -35,7 +35,7 @@ func Load() (*Config, error) {
 // load はユーザー設定→ローカル設定の順に読み込み、どちらも無ければデフォルト設定を生成します。
 // ユーザー設定が存在する場合のみ、不足メニューの移行(migrateUserConfig)を行います。
 func load(userConfigPath, localConfigPath string) (*Config, error) {
-	cfg, err := configutil.TryLoad[Config](userConfigPath)
+	cfg, err := tryLoadValidated(userConfigPath)
 	if err != nil {
 		return nil, err
 	}
@@ -43,7 +43,7 @@ func load(userConfigPath, localConfigPath string) (*Config, error) {
 		return migrateUserConfig(userConfigPath, cfg)
 	}
 
-	cfg, err = configutil.TryLoad[Config](localConfigPath)
+	cfg, err = tryLoadValidated(localConfigPath)
 	if err != nil {
 		return nil, err
 	}
@@ -52,6 +52,19 @@ func load(userConfigPath, localConfigPath string) (*Config, error) {
 	}
 
 	return createDefaultConfig(userConfigPath), nil
+}
+
+// tryLoadValidated は設定ファイルを読み込み、存在すれば検証まで行います。
+// ファイルが存在しない場合は (nil, nil) を返します。
+func tryLoadValidated(path string) (*Config, error) {
+	cfg, err := configutil.TryLoad[Config](path)
+	if err != nil || cfg == nil {
+		return cfg, err
+	}
+	if err := cfg.Validate(); err != nil {
+		return nil, fmt.Errorf("設定ファイル %q が不正です: %w", path, err)
+	}
+	return cfg, nil
 }
 
 func migrateUserConfig(path string, cfg *Config) (*Config, error) {

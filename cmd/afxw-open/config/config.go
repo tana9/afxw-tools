@@ -30,7 +30,7 @@ func DefaultConfig() *Config {
 	}
 }
 
-// Validate checks values that would otherwise fail only when a program is used.
+// Validate は、プログラムを実際に使ったときにしか判明しない不正な値がないかを検証します。
 func (c *Config) Validate() error {
 	for i, program := range c.Programs {
 		if strings.TrimSpace(program.Name) == "" {
@@ -54,6 +54,19 @@ func LoadFrom(path string) (*Config, error) {
 	return cfg, nil
 }
 
+// tryLoadValidated は設定ファイルを読み込み、存在すれば検証まで行います。
+// ファイルが存在しない場合は (nil, nil) を返します。
+func tryLoadValidated(path string) (*Config, error) {
+	cfg, err := configutil.TryLoad[Config](path)
+	if err != nil || cfg == nil {
+		return cfg, err
+	}
+	if err := cfg.Validate(); err != nil {
+		return nil, fmt.Errorf("設定ファイル %q が不正です: %w", path, err)
+	}
+	return cfg, nil
+}
+
 func Load() (*Config, error) {
 	home, err := os.UserHomeDir()
 	if err != nil {
@@ -67,7 +80,7 @@ func Load() (*Config, error) {
 // load はユーザー設定→ローカル設定の順に読み込み、どちらも無ければデフォルト設定を生成します。
 func load(configPath, localPath string) (*Config, error) {
 	for _, path := range []string{configPath, localPath} {
-		cfg, err := configutil.TryLoad[Config](path)
+		cfg, err := tryLoadValidated(path)
 		if err != nil {
 			return nil, err
 		}

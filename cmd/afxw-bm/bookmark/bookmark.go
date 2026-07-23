@@ -63,8 +63,9 @@ func parseLines(data string) []string {
 }
 
 // Add はパスを正規化してブックマークファイルへ追記します。
-// 既存エントリと大文字小文字を無視して重複する場合は何もしません。
-func Add(path string, newItem string) error {
+// 既存エントリと大文字小文字を無視して重複する場合はfalseを返します。
+// 新規に追加した場合はtrueを返します。
+func Add(path string, newItem string) (added bool, err error) {
 	addMu.Lock()
 	defer addMu.Unlock()
 
@@ -73,13 +74,13 @@ func Add(path string, newItem string) error {
 
 	data, err := readAll(path)
 	if err != nil {
-		return err
+		return false, err
 	}
 
 	newKey := normKey(newItem)
 	for _, line := range parseLines(data) {
 		if normKey(line) == newKey { // Windowsパスは大文字小文字を区別しない
-			return nil
+			return false, nil
 		}
 	}
 
@@ -91,16 +92,16 @@ func Add(path string, newItem string) error {
 
 	f, err := os.OpenFile(path, os.O_APPEND|os.O_CREATE|os.O_WRONLY, 0644)
 	if err != nil {
-		return fmt.Errorf("追記用ブックマークファイルのオープンに失敗しました: %w", err)
+		return false, fmt.Errorf("追記用ブックマークファイルのオープンに失敗しました: %w", err)
 	}
 
 	if _, err := f.WriteString(entry); err != nil {
 		_ = f.Close()
-		return fmt.Errorf("ブックマークファイルへの書き込みに失敗しました: %w", err)
+		return false, fmt.Errorf("ブックマークファイルへの書き込みに失敗しました: %w", err)
 	}
 	if err := f.Close(); err != nil {
-		return fmt.Errorf("ブックマークファイルのクローズに失敗しました: %w", err)
+		return false, fmt.Errorf("ブックマークファイルのクローズに失敗しました: %w", err)
 	}
 
-	return nil
+	return true, nil
 }
