@@ -2,7 +2,7 @@
 
 ## Commands
 
-- Install Go **1.26** as declared in `go.mod`; this is a Windows-focused project.
+- Install Go **1.27** as declared in `go.mod`; this is a Windows-focused project.
 - Build every executable into `bin/`: `task build`
 - Build one executable: `task build-his`, `task build-bm`, `task build-zox`, `task build-launcher`, or `task build-open`
 - Run all unit tests: `task test` (equivalent to `go test ./...`)

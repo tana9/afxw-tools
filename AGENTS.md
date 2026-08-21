@@ -15,7 +15,7 @@ Use [Task](https://taskfile.dev/) from the repository root:
 - `task e2e-test` builds and exercises all eight executables on Windows without requiring Afxw.
 - `task lint` runs `golangci-lint run ./...`.
 
-Run `go test ./internal/configutil` or another package path for a focused test cycle. The module requires Go 1.26 with the toolchain version declared in `go.mod`.
+Run `go test ./internal/configutil` or another package path for a focused test cycle. The module requires Go 1.27 as declared in `go.mod`.
 
 ## Coding Style & Naming Conventions
 
