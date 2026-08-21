@@ -15,6 +15,7 @@ import (
 	"path/filepath"
 	"slices"
 	"strings"
+	"sync"
 	"unicode/utf8"
 )
 
@@ -28,6 +29,8 @@ const (
 	// classifySampleSize は文字コード判定でファイル先頭から読む上限バイト数。
 	// ファイル全体を読むと大きなツリーでripgrep本体より判定処理が支配的になるため、サンプリングに留める。
 	classifySampleSize = 64 * 1024
+	// classifyConcurrency はファイル文字コード判定の同時実行数の上限です。I/O待ちを重ねて総所要時間を短縮します。
+	classifyConcurrency = 32
 )
 
 // Options は検索条件を表します。
@@ -143,15 +146,31 @@ func listFiles(ctx context.Context, executable string, opts Options) ([]string, 
 }
 
 // classifyFiles はUTF-8として妥当なファイルとShift_JIS候補へ排他的に分類します。
+// ファイルオープン・読み込みがI/O待ちの大半を占めるため、判定を並行実行して総所要時間を短縮します。
 func classifyFiles(root string, files []string) ([]string, []string, error) {
+	valid := make([]bool, len(files))
+	errs := make([]error, len(files))
+
+	sem := make(chan struct{}, classifyConcurrency)
+	var wg sync.WaitGroup
+	for i, path := range files {
+		wg.Add(1)
+		sem <- struct{}{}
+		go func(i int, path string) {
+			defer wg.Done()
+			defer func() { <-sem }()
+			valid[i], errs[i] = isUTF8File(filepath.Join(root, path))
+		}(i, path)
+	}
+	wg.Wait()
+
 	utf8Files := make([]string, 0, len(files))
 	sjisFiles := make([]string, 0)
-	for _, path := range files {
-		valid, err := isUTF8File(filepath.Join(root, path))
-		if err != nil {
-			return nil, nil, fmt.Errorf("文字コードの判定に失敗しました (%s): %w", path, err)
+	for i, path := range files {
+		if errs[i] != nil {
+			return nil, nil, fmt.Errorf("文字コードの判定に失敗しました (%s): %w", path, errs[i])
 		}
-		if valid {
+		if valid[i] {
 			utf8Files = append(utf8Files, path)
 		} else {
 			sjisFiles = append(sjisFiles, path)
