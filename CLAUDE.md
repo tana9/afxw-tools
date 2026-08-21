@@ -4,7 +4,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ## Commands
 
-- Go **1.26** is required (declared in `go.mod`); this is a Windows-focused project (uses `go-ole`, `golang.org/x/sys/windows`) and only builds/runs correctly on Windows.
+- Go **1.27** is required (declared in `go.mod`); this is a Windows-focused project (uses `go-ole`, `golang.org/x/sys/windows`) and only builds/runs correctly on Windows.
 - Build every executable into `bin/`: `task build`
 - Build one executable: `task build-his`, `task build-bm`, `task build-zox`, `task build-launcher`, `task build-open`, `task build-wt`, `task build-rg`, or `task build-diff`
 - Run all unit tests: `task test` (equivalent to `go test ./...`)
