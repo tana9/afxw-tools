@@ -4,6 +4,7 @@ package search
 import (
 	"bufio"
 	"bytes"
+	"cmp"
 	"context"
 	"encoding/json"
 	"errors"
@@ -12,7 +13,7 @@ import (
 	"os"
 	"os/exec"
 	"path/filepath"
-	"sort"
+	"slices"
 	"strings"
 	"unicode/utf8"
 )
@@ -81,11 +82,11 @@ func Run(ctx context.Context, executable string, opts Options) ([]Match, error) 
 			matches = append(matches, found...)
 		}
 	}
-	sort.Slice(matches, func(i, j int) bool {
-		if matches[i].Path == matches[j].Path {
-			return matches[i].Line < matches[j].Line
+	slices.SortFunc(matches, func(a, b Match) int {
+		if c := cmp.Compare(a.Path, b.Path); c != 0 {
+			return c
 		}
-		return matches[i].Path < matches[j].Path
+		return cmp.Compare(a.Line, b.Line)
 	})
 	return matches, nil
 }
@@ -133,7 +134,7 @@ func listFiles(ctx context.Context, executable string, opts Options) ([]string, 
 	}
 
 	var files []string
-	for _, item := range bytes.Split(output, []byte{0}) {
+	for item := range bytes.SplitSeq(output, []byte{0}) {
 		if len(item) > 0 {
 			files = append(files, string(item))
 		}
