@@ -3,6 +3,7 @@ package bookmark
 import (
 	"errors"
 	"fmt"
+	"hash/fnv"
 	"os"
 	"path/filepath"
 	"strings"
@@ -10,6 +11,7 @@ import (
 
 	"golang.org/x/sys/windows"
 
+	"github.com/tana9/afxw-tools/internal/singleinstance"
 	"github.com/tana9/afxw-tools/internal/stringutil"
 )
 
@@ -17,13 +19,6 @@ var addMu sync.Mutex
 
 // lockTimeoutMs はブックマークファイルの排他ロック取得を待つ最大時間（ミリ秒）です。
 const lockTimeoutMs uint32 = 3000
-
-// WaitForSingleObject の戻り値定数（uint32）
-const (
-	waitObject0   uint32 = 0x00000000
-	waitAbandoned uint32 = 0x00000080
-	waitTimeout   uint32 = 0x00000102
-)
 
 func GetDefaultPath() (string, error) {
 	exe, err := os.Executable()
@@ -129,41 +124,24 @@ func Add(path string, newItem string) (added bool, err error) {
 // acquireFileLock はブックマークファイルパスに対応する名前付きミューテックスを取得します。
 // 複数プロセスがAddを同時実行した場合でも、読み込みから追記までを排他区間として扱うためのロックです。
 func acquireFileLock(path string) (windows.Handle, error) {
-	name := mutexNameForPath(path)
-	h, err := windows.CreateMutex(nil, true, windows.StringToUTF16Ptr(`Local\`+name))
-	if err == nil {
-		return h, nil
-	}
-	if err != windows.ERROR_ALREADY_EXISTS {
-		return 0, fmt.Errorf("ブックマークファイルのロック取得に失敗しました: %w", err)
-	}
-
-	// 別プロセスがロック中 - 解放を待つ
-	event, err := windows.WaitForSingleObject(h, lockTimeoutMs)
+	h, err := singleinstance.AcquireHandle(mutexNameForPath(path), lockTimeoutMs)
 	if err != nil {
-		_ = windows.CloseHandle(h)
-		return 0, fmt.Errorf("ブックマークファイルのロック待機に失敗しました: %w", err)
+		if errors.Is(err, singleinstance.ErrTimeout) {
+			return 0, fmt.Errorf("ブックマークファイルのロック取得がタイムアウトしました (%s): %w", path, err)
+		}
+		return 0, fmt.Errorf("ブックマークファイルのロック取得に失敗しました (%s): %w", path, err)
 	}
-	switch event {
-	case waitObject0, waitAbandoned:
-		return h, nil
-	case waitTimeout:
-		_ = windows.CloseHandle(h)
-		return 0, fmt.Errorf("ブックマークファイルのロック取得がタイムアウトしました")
-	default:
-		_ = windows.CloseHandle(h)
-		return 0, fmt.Errorf("ブックマークファイルのロック待機で予期しない戻り値です: %d", event)
-	}
+	return h, nil
 }
 
 // releaseFileLock は acquireFileLock で取得したロックを解放します。
 func releaseFileLock(h windows.Handle) {
-	_ = windows.ReleaseMutex(h)
-	_ = windows.CloseHandle(h)
+	singleinstance.Release(h)
 }
 
 // mutexNameForPath はファイルパスから名前付きミューテックス名を生成します。
-// ミューテックス名に使えない記号を含み得るため、絶対パスを小文字化したうえで英数字以外を置換します。
+// パスをそのまま使うとミューテックス名として不正な記号や長さ制限超過があり得るため、
+// 絶対パスを小文字化したうえでハッシュ化し、固定長の名前にします。
 func mutexNameForPath(path string) string {
 	abs, err := filepath.Abs(path)
 	if err != nil {
@@ -171,15 +149,7 @@ func mutexNameForPath(path string) string {
 	}
 	abs = strings.ToLower(filepath.Clean(abs))
 
-	var b strings.Builder
-	b.Grow(len(abs) + 8)
-	b.WriteString("afxw-bm-")
-	for _, r := range abs {
-		if (r >= 'a' && r <= 'z') || (r >= '0' && r <= '9') {
-			b.WriteRune(r)
-		} else {
-			b.WriteRune('_')
-		}
-	}
-	return b.String()
+	h := fnv.New64a()
+	_, _ = h.Write([]byte(abs))
+	return fmt.Sprintf("afxw-bm-%016x", h.Sum64())
 }

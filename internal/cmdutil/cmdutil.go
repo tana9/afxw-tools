@@ -48,6 +48,11 @@ func ResolveExecutable(command string, candidates ...string) string {
 	return command
 }
 
+// StartCommand はコマンドを非同期で起動します。終了は待ちません。
+func StartCommand(path string, args []string) error {
+	return exec.Command(path, args...).Start()
+}
+
 // ExecDir は実行ファイルのディレクトリを返します。
 func ExecDir() string {
 	exe, err := os.Executable()

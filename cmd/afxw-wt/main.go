@@ -4,7 +4,6 @@ import (
 	"context"
 	"fmt"
 	"os"
-	"os/exec"
 	"path/filepath"
 
 	"github.com/tana9/afxw-tools/internal/afx"
@@ -32,7 +31,7 @@ func main() {
 				return fmt.Errorf("アクティブパスの取得に失敗しました: %w", err)
 			}
 
-			return run(path, resolveWt(), startCommand)
+			return run(path, resolveWt(), cmdutil.StartCommand)
 		},
 	}
 
@@ -61,9 +60,4 @@ func resolveWt() string {
 		alias = filepath.Join(localAppData, "Microsoft", "WindowsApps", "wt.exe")
 	}
 	return cmdutil.ResolveExecutable("wt.exe", alias)
-}
-
-// startCommand はコマンドを非同期で起動します。終了は待ちません。
-func startCommand(path string, args []string) error {
-	return exec.Command(path, args...).Start()
 }

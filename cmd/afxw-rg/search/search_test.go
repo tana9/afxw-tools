@@ -2,6 +2,7 @@ package search
 
 import (
 	"context"
+	"fmt"
 	"os"
 	"os/exec"
 	"path/filepath"
@@ -62,6 +63,33 @@ func TestClassifyFiles(t *testing.T) {
 	}
 	if !reflect.DeepEqual(sjisFiles, []string{"sjis.txt"}) {
 		t.Errorf("Shift_JIS files = %v", sjisFiles)
+	}
+}
+
+func TestClassifyFilesError(t *testing.T) {
+	dir := t.TempDir()
+	if err := os.WriteFile(filepath.Join(dir, "ok.txt"), []byte("ok"), 0644); err != nil {
+		t.Fatal(err)
+	}
+
+	_, _, err := classifyFiles(dir, []string{"ok.txt", "missing.txt"})
+	if err == nil {
+		t.Fatal("エラーを期待しましたが nil でした")
+	}
+}
+
+// classifyConcurrencyを超える件数のファイルすべてが判定エラーとなるケースでも、
+// デッドロックせず正しくエラーを返すことを確認する（並行起動の打ち切りロジックの回帰防止）。
+func TestClassifyFilesErrorManyFiles(t *testing.T) {
+	dir := t.TempDir()
+	files := make([]string, 0, classifyConcurrency*3)
+	for i := range classifyConcurrency * 3 {
+		files = append(files, fmt.Sprintf("missing-%d.txt", i))
+	}
+
+	_, _, err := classifyFiles(dir, files)
+	if err == nil {
+		t.Fatal("エラーを期待しましたが nil でした")
 	}
 }
 

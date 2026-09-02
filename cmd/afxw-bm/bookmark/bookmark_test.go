@@ -4,6 +4,7 @@ import (
 	"os"
 	"path/filepath"
 	"reflect"
+	"strings"
 	"sync"
 	"testing"
 )
@@ -132,6 +133,26 @@ func TestAddConcurrentDuplicate(t *testing.T) {
 	}
 	if len(dirs) != 1 || dirs[0] != filepath.Clean(item) {
 		t.Fatalf("got %v, want one %q", dirs, filepath.Clean(item))
+	}
+}
+
+func TestMutexNameForPath(t *testing.T) {
+	base := filepath.Join(t.TempDir(), "bookmarks.txt")
+
+	name1 := mutexNameForPath(base)
+	name2 := mutexNameForPath(base)
+	if name1 != name2 {
+		t.Errorf("同一パスに対する名前が一致しません: %q != %q", name1, name2)
+	}
+
+	// Windowsパスは大文字小文字を区別しないため、大文字化しても同じ名前になるべき
+	if got := mutexNameForPath(strings.ToUpper(base)); got != name1 {
+		t.Errorf("大文字小文字違いのパスで名前が一致しません: %q != %q", got, name1)
+	}
+
+	other := filepath.Join(t.TempDir(), "bookmarks.txt")
+	if got := mutexNameForPath(other); got == name1 {
+		t.Errorf("異なるパスなのに同じ名前になりました: %q", got)
 	}
 }
 

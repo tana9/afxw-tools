@@ -4,7 +4,6 @@ import (
 	"context"
 	"fmt"
 	"os"
-	"os/exec"
 	"path/filepath"
 
 	"github.com/tana9/afxw-tools/internal/afx"
@@ -41,7 +40,7 @@ func main() {
 				}
 			}
 
-			return run(paths, resolveWinMerge(), startCommand)
+			return run(paths, resolveWinMerge(), cmdutil.StartCommand)
 		},
 	}
 
@@ -73,9 +72,4 @@ func executableIn(env string, elems ...string) string {
 		return ""
 	}
 	return filepath.Join(append([]string{root}, elems...)...)
-}
-
-// startCommand はコマンドを非同期で起動します。終了は待ちません。
-func startCommand(path string, args []string) error {
-	return exec.Command(path, args...).Start()
 }

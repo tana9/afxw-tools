@@ -4,11 +4,11 @@ import (
 	"context"
 	"errors"
 	"fmt"
-	"os/exec"
 
 	"github.com/ktr0731/go-fuzzyfinder"
 	"github.com/tana9/afxw-tools/cmd/afxw-open/config"
 	"github.com/tana9/afxw-tools/internal/cliutil"
+	"github.com/tana9/afxw-tools/internal/cmdutil"
 	"github.com/tana9/afxw-tools/internal/singleinstance"
 	"github.com/urfave/cli/v3"
 )
@@ -77,7 +77,7 @@ func selectProgram(programs []config.Program) (int, error) {
 // openFiles は指定されたプログラムでファイルを開きます。
 // プログラムは非同期で起動し、ツール自体はすぐに終了します。
 func openFiles(p config.Program, files []string) error {
-	return openFilesWith(p, files, config.FindCommand, startCommand)
+	return openFilesWith(p, files, config.FindCommand, cmdutil.StartCommand)
 }
 
 func openFilesWith(p config.Program, files []string, findCommand func(string) (string, error), startCommand func(string, []string) error) error {
@@ -95,9 +95,4 @@ func openFilesWith(p config.Program, files []string, findCommand func(string) (s
 	}
 
 	return nil
-}
-
-// startCommand はコマンドを非同期で起動します。終了は待ちません。
-func startCommand(path string, args []string) error {
-	return exec.Command(path, args...).Start()
 }
