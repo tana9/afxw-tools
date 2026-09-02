@@ -115,7 +115,7 @@ func (a *oleAFX) getWindowHistories(win int) ([]string, error) {
 }
 
 // toInt はCOMのVARIANTから返る整数値を型を問わずintに変換します。
-// afxw.obj側の実装差異でVARIANTのサブタイプ(int16/int32/int64等)が変わってもpanicしないようにするための変換です。
+// afxw.obj側の実装差異でVARIANTのサブタイプ(int16/int32/int64や符号なし系等)が変わってもpanicしないようにするための変換です。
 func toInt(v any) (int, error) {
 	switch n := v.(type) {
 	case int:
@@ -125,6 +125,12 @@ func toInt(v any) (int, error) {
 	case int32:
 		return int(n), nil
 	case int64:
+		return int(n), nil
+	case uint16:
+		return int(n), nil
+	case uint32:
+		return int(n), nil
+	case uint64:
 		return int(n), nil
 	default:
 		return 0, fmt.Errorf("予期しない型です (%T)", v)

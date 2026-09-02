@@ -16,6 +16,7 @@ import (
 	"slices"
 	"strings"
 	"sync"
+	"sync/atomic"
 	"unicode/utf8"
 )
 
@@ -147,19 +148,27 @@ func listFiles(ctx context.Context, executable string, opts Options) ([]string, 
 
 // classifyFiles はUTF-8として妥当なファイルとShift_JIS候補へ排他的に分類します。
 // ファイルオープン・読み込みがI/O待ちの大半を占めるため、判定を並行実行して総所要時間を短縮します。
+// いずれかのファイルで判定エラーが起きた時点で以降の起動は打ち切り、無駄なI/Oを増やさないようにします。
 func classifyFiles(root string, files []string) ([]string, []string, error) {
 	valid := make([]bool, len(files))
 	errs := make([]error, len(files))
 
 	sem := make(chan struct{}, classifyConcurrency)
 	var wg sync.WaitGroup
+	var failed atomic.Bool
 	for i, path := range files {
+		if failed.Load() {
+			break
+		}
 		wg.Add(1)
 		sem <- struct{}{}
 		go func(i int, path string) {
 			defer wg.Done()
 			defer func() { <-sem }()
 			valid[i], errs[i] = isUTF8File(filepath.Join(root, path))
+			if errs[i] != nil {
+				failed.Store(true)
+			}
 		}(i, path)
 	}
 	wg.Wait()

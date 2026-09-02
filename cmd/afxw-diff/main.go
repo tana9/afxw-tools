@@ -75,6 +75,7 @@ func executableIn(env string, elems ...string) string {
 	return filepath.Join(append([]string{root}, elems...)...)
 }
 
+// startCommand はコマンドを非同期で起動します。終了は待ちません。
 func startCommand(path string, args []string) error {
 	return exec.Command(path, args...).Start()
 }

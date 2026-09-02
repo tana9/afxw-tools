@@ -97,6 +97,7 @@ func openFilesWith(p config.Program, files []string, findCommand func(string) (s
 	return nil
 }
 
+// startCommand はコマンドを非同期で起動します。終了は待ちません。
 func startCommand(path string, args []string) error {
 	return exec.Command(path, args...).Start()
 }

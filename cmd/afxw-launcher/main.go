@@ -56,12 +56,15 @@ func run(ctx context.Context) error {
 	return executeCommand(ctx, cfg, cfg.Menu[final.cursor])
 }
 
+// executeCommand は選択されたメニュー項目のコマンドを解決し、実行します。
 func executeCommand(ctx context.Context, cfg *config.Config, item config.MenuItem) error {
 	return executeCommandWith(item, cfg.FindCommand, resolveArgs, func(path string, args []string) error {
 		return runCommand(ctx, path, args)
 	})
 }
 
+// executeCommandWith はコマンド解決・引数解決・実行の各処理を注入可能にしたexecuteCommandの本体です。
+// テストでfindCommand/resolveArgs/runCommandを差し替えられるようにするために分離しています。
 func executeCommandWith(item config.MenuItem, findCommand func(string) (string, error), resolveArgs func([]string) ([]string, error), runCommand func(string, []string) error) error {
 	cmdPath, err := findCommand(item.Command)
 	if err != nil {
@@ -80,6 +83,7 @@ func executeCommandWith(item config.MenuItem, findCommand func(string) (string, 
 	return nil
 }
 
+// runCommand はコマンドを起動し、標準入出力を接続したうえで終了を待ちます。
 func runCommand(ctx context.Context, path string, args []string) error {
 	cmd := exec.CommandContext(ctx, path, args...)
 	cmd.Stdin = os.Stdin
