@@ -2,6 +2,7 @@ package afx
 
 import (
 	"fmt"
+	"path/filepath"
 	"runtime"
 	"strings"
 
@@ -160,17 +161,15 @@ func (a *oleAFX) GetActivePath() (string, error) {
 	return a.extract("$P")
 }
 
+// GetCurrentFile はカーソル位置のファイルのフルパスを返します。
 func (a *oleAFX) GetCurrentFile() (string, error) {
-	// $P はカレントディレクトリ（末尾に \ あり）、$F はカーソル上のファイル名
-	dir, err := a.extract("$P")
+	// $P はカレントディレクトリ（末尾に \ なし）、$F はカーソル上のファイル名。
+	// 区切りの \ を補って1回のExtractで取得し、ルートでの \ の重複はCleanで正規化する。
+	path, err := a.extract(`$P\$F`)
 	if err != nil {
 		return "", err
 	}
-	name, err := a.extract("$F")
-	if err != nil {
-		return "", err
-	}
-	return dir + name, nil
+	return filepath.Clean(path), nil
 }
 
 func (a *oleAFX) GetMarkedFiles() ([]string, error) {
