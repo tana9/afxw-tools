@@ -8,6 +8,7 @@ import (
 	"github.com/tana9/afxw-tools/internal/cmdutil"
 )
 
+// MenuItem はランチャーのメニュー1項目（表示名・説明・実行コマンド・引数）を表します。
 type MenuItem struct {
 	Name        string   `toml:"name"`
 	Description string   `toml:"description"`
@@ -15,15 +16,18 @@ type MenuItem struct {
 	Args        []string `toml:"args"`
 }
 
+// Settings は設定ファイルの [settings] セクションを表します。
 type Settings struct {
 	ToolDir string `toml:"tool_dir"`
 }
 
+// Config はランチャーの設定全体（メニュー一覧と設定）を表します。
 type Config struct {
 	Menu     []MenuItem `toml:"menu"`
 	Settings Settings   `toml:"settings"`
 }
 
+// DefaultConfig は新規設定ファイルの生成に使う既定の設定を返します。
 func DefaultConfig() *Config {
 	menu := []MenuItem{
 		{Name: "フォルダ履歴から選択", Description: "あふwのフォルダ履歴から選択して移動", Command: "afxw-his.exe", Args: []string{}},
@@ -63,6 +67,7 @@ func (c *Config) Validate() error {
 	return nil
 }
 
+// FindCommand はtool_dirが設定されていればそのフォルダも含めて、コマンドの実行ファイルを探します。
 func (c *Config) FindCommand(command string) (string, error) {
 	if c.Settings.ToolDir != "" {
 		return cmdutil.Find(command, c.Settings.ToolDir)

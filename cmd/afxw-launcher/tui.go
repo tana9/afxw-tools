@@ -33,6 +33,7 @@ var (
 			MarginTop(1)
 )
 
+// model はランチャーのメニュー画面の状態を表します。
 type model struct {
 	cfg      *config.Config
 	cursor   int
@@ -42,10 +43,12 @@ type model struct {
 	numberInput string
 }
 
+// Init は初期化時に実行するコマンドがないため nil を返します。
 func (m model) Init() tea.Cmd {
 	return nil
 }
 
+// Update はキー入力に応じてカーソル移動・番号入力・選択・終了を処理します。
 func (m model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	switch msg := msg.(type) {
 	case tea.KeyMsg:
@@ -130,6 +133,7 @@ func (m *model) selectByNumber(input string) {
 	m.selected = true
 }
 
+// View はメニュー項目の一覧と操作ヘルプを描画した文字列を返します。
 func (m model) View() string {
 	if m.quitting && !m.selected {
 		return ""

@@ -15,6 +15,7 @@ import (
 
 var version = "dev"
 
+// main は afxw-open のCLIを定義して実行します。
 func main() {
 	cmd := &cli.Command{
 		Name:      "afxw-open",
@@ -47,6 +48,7 @@ func run(files []string) error {
 	return runWithConfig(files, cfg, selectProgram, openFiles)
 }
 
+// runWithConfig は設定のプログラム一覧から選択させ、選択されたプログラムでファイルを開きます。選択キャンセル時は何もしません。
 func runWithConfig(files []string, cfg *config.Config, selectProgram func([]config.Program) (int, error), openFiles func(config.Program, []string) error) error {
 	if len(cfg.Programs) == 0 {
 		return fmt.Errorf("プログラムが設定されていません")
@@ -80,6 +82,7 @@ func openFiles(p config.Program, files []string) error {
 	return openFilesWith(p, files, config.FindCommand, cmdutil.StartCommand)
 }
 
+// openFilesWith はコマンド解決・引数結合・起動の各処理を注入可能にしたopenFilesの本体です。
 func openFilesWith(p config.Program, files []string, findCommand func(string) (string, error), startCommand func(string, []string) error) error {
 	cmdPath, err := findCommand(p.Command)
 	if err != nil {

@@ -13,6 +13,7 @@ import (
 
 var version = "dev"
 
+// main は afxw-diff のCLIを定義して実行します。
 func main() {
 	cmd := &cli.Command{
 		Name:      "afxw-diff",
@@ -45,6 +46,7 @@ func main() {
 	cliutil.Run(cmd)
 }
 
+// run は比較対象が2つあるか検証し、WinMergeを起動して比較させます。対象数が不正な場合はNoticeを返します。
 func run(paths []string, winMergePath string, start func(string, []string) error) error {
 	if len(paths) != 2 {
 		return &cliutil.Notice{Message: fmt.Sprintf("比較するファイルまたはフォルダを2つ選択してください（現在%d個）。", len(paths))}

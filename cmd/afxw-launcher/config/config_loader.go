@@ -17,6 +17,7 @@ func LoadFrom(path string) (*Config, error) {
 	return configutil.LoadValidated[Config](path)
 }
 
+// Load はユーザー設定とローカル設定を読み込み、ランチャーの設定を返します。
 func Load() (*Config, error) {
 	home, err := os.UserHomeDir()
 	if err != nil {
@@ -52,6 +53,7 @@ func load(userConfigPath, localConfigPath string) (*Config, error) {
 	return cfg, nil
 }
 
+// migrateUserConfig はユーザー設定に不足している標準メニューを追記し、追加があれば案内を表示します。
 func migrateUserConfig(path string, cfg *Config) (*Config, error) {
 	items := addMissingStandardMenuItems(cfg)
 	if len(items) == 0 {

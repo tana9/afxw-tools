@@ -20,6 +20,7 @@ var addMu sync.Mutex
 // lockTimeoutMs はブックマークファイルの排他ロック取得を待つ最大時間（ミリ秒）です。
 const lockTimeoutMs uint32 = 3000
 
+// GetDefaultPath は実行ファイルと同じフォルダの bookmarks.txt のパスを返します。
 func GetDefaultPath() (string, error) {
 	exe, err := os.Executable()
 	if err != nil {

@@ -15,6 +15,7 @@ import (
 
 var version = "dev"
 
+// main は afxw-his のCLIを定義して実行します。
 func main() {
 	cmd := &cli.Command{
 		Name:    "afxw-his",
@@ -51,6 +52,7 @@ func main() {
 	cliutil.Run(cmd)
 }
 
+// parseWindowFlag は --window の値 (left, right, both) を対象ウィンドウ番号の一覧に変換します。
 func parseWindowFlag(window string) ([]int, error) {
 	switch window {
 	case "left":

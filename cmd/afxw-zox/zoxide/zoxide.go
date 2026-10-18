@@ -14,6 +14,7 @@ import (
 	"github.com/tana9/afxw-tools/internal/cmdutil"
 )
 
+// Entry はzoxideデータベースの1件（ディレクトリパスとfrecencyスコア）を表します。
 type Entry struct {
 	Path  string
 	Score float64
@@ -65,6 +66,7 @@ func ResolveExecutable() string {
 	return resolvedExecPath
 }
 
+// resolveExecutable は候補パスを含めて cmdutil.ResolveExecutable でzoxideの実行ファイルを解決します。
 func resolveExecutable() string {
 	return cmdutil.ResolveExecutable("zoxide", candidateExecutablePaths()...)
 }
@@ -74,6 +76,7 @@ func Query(ctx context.Context) ([]Entry, error) {
 	return queryWith(ctx, ResolveExecutable())
 }
 
+// queryWith は指定した実行ファイルで zoxide query を実行し、結果をパースして返します。
 func queryWith(ctx context.Context, executable string) ([]Entry, error) {
 	cmd := exec.CommandContext(ctx, executable, "query", "--list", "--score")
 	output, err := cmd.Output()
@@ -110,6 +113,7 @@ func parseQueryOutput(output string) ([]Entry, error) {
 	return raw, nil
 }
 
+// Paths は各エントリのパスのみを順序を保ったまま抽出して返します。
 func Paths(entries []Entry) []string {
 	paths := make([]string, len(entries))
 	for i, entry := range entries {

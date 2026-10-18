@@ -16,6 +16,7 @@ import (
 
 var version = "dev"
 
+// main は afxw-bm のCLIを定義して実行します。
 func main() {
 	cmd := &cli.Command{
 		Name:    "afxw-bm",
@@ -71,6 +72,7 @@ func main() {
 	cliutil.Run(cmd)
 }
 
+// addBookmark は指定パスの絶対パスをブックマークに追加し、結果を標準出力に表示します。
 func addBookmark(path string) error {
 	absPath, err := filepath.Abs(path)
 	if err != nil {

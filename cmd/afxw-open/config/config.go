@@ -10,6 +10,7 @@ import (
 	"github.com/tana9/afxw-tools/internal/configutil"
 )
 
+// Program は選択肢として表示する外部プログラム（表示名・説明・コマンド・引数）を表します。
 type Program struct {
 	Name        string   `toml:"name"`
 	Description string   `toml:"description"`
@@ -17,10 +18,12 @@ type Program struct {
 	Args        []string `toml:"args"`
 }
 
+// Config は afxw-open の設定（プログラム一覧）を表します。
 type Config struct {
 	Programs []Program `toml:"program"`
 }
 
+// DefaultConfig は新規設定ファイルの生成に使う既定のプログラム一覧を返します。
 func DefaultConfig() *Config {
 	return &Config{
 		Programs: []Program{
@@ -48,6 +51,7 @@ func LoadFrom(path string) (*Config, error) {
 	return configutil.LoadValidated[Config](path)
 }
 
+// Load はユーザー設定とローカル設定を読み込み、afxw-open の設定を返します。
 func Load() (*Config, error) {
 	home, err := os.UserHomeDir()
 	if err != nil {
@@ -75,6 +79,7 @@ func load(configPath, localPath string) (*Config, error) {
 	return cfg, nil
 }
 
+// FindCommand は実行ファイルと同じフォルダおよびPATHからコマンドの実行ファイルを探します。
 func FindCommand(command string) (string, error) {
 	return cmdutil.Find(command)
 }

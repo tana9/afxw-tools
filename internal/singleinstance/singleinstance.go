@@ -29,6 +29,7 @@ func Acquire(name string) error {
 	return acquire(name, defaultWaitMs)
 }
 
+// acquire は名前付きミューテックスを取得し、取得したハンドルをプロセス終了まで保持します。
 func acquire(name string, timeoutMs uint32) error {
 	h, err := acquireHandle(name, timeoutMs)
 	if err != nil {

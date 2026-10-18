@@ -28,11 +28,13 @@ type AFX interface {
 	Close()
 }
 
+// oleAFX は afxw.obj のCOMオブジェクトとその IUnknown を保持する AFX の実装です。
 type oleAFX struct {
 	afxw    *ole.IDispatch
 	unknown *ole.IUnknown
 }
 
+// NewOleAFX は afxw.obj に接続して AFX を返します。COMの初期化とOSスレッドのロックを行い、失敗時は後始末してから返します。
 func NewOleAFX() (AFX, error) {
 	runtime.LockOSThread()
 	success := false
@@ -80,6 +82,7 @@ func Connect() (AFX, error) {
 	return a, nil
 }
 
+// Histories は指定したウィンドウ番号のフォルダ履歴をまとめて返します。
 func (a *oleAFX) Histories(wins []int) ([]string, error) {
 	var dirs []string
 	for _, win := range wins {
@@ -92,6 +95,7 @@ func (a *oleAFX) Histories(wins []int) ([]string, error) {
 	return dirs, nil
 }
 
+// getWindowHistories は1つのウィンドウのフォルダ履歴を件数分取得して返します。
 func (a *oleAFX) getWindowHistories(win int) ([]string, error) {
 	res, err := oleutil.CallMethod(a.afxw, "HisDirCount", win)
 	if err != nil {
@@ -138,6 +142,7 @@ func toInt(v any) (int, error) {
 	}
 }
 
+// EXCD は指定したフォルダへ移動します。末尾に \ が無ければ補って実行します。
 func (a *oleAFX) EXCD(path string) error {
 	normalizedPath := ensureTrailingBackslash(path)
 	return a.execEXCD(normalizedPath)
@@ -148,6 +153,7 @@ func (a *oleAFX) EXCDFile(path string) error {
 	return a.execEXCD(path)
 }
 
+// execEXCD はあふwの &EXCD コマンドを実行して指定パスへ移動させます。
 func (a *oleAFX) execEXCD(path string) error {
 	res, err := oleutil.CallMethod(a.afxw, "Exec", fmt.Sprintf("&EXCD -P\"%s\"", path))
 	if err != nil {
@@ -157,6 +163,7 @@ func (a *oleAFX) execEXCD(path string) error {
 	return nil
 }
 
+// GetActivePath はアクティブウィンドウのカレントディレクトリのパスを返します。
 func (a *oleAFX) GetActivePath() (string, error) {
 	// $P はアクティブウィンドウのカレントディレクトリに展開されます
 	return a.extract("$P")
@@ -173,6 +180,7 @@ func (a *oleAFX) GetCurrentFile() (string, error) {
 	return filepath.Clean(path), nil
 }
 
+// GetMarkedFiles はマークされたファイルのフルパス一覧を返します。マークが無い場合はカーソル位置のファイルを返します。
 func (a *oleAFX) GetMarkedFiles() ([]string, error) {
 	return getMarkedFiles(a.extract, a.GetCurrentFile)
 }
@@ -187,6 +195,7 @@ func getMarkedFiles(extract func(string) (string, error), getCurrentFile func() 
 	return parseMarkedFiles(result, getCurrentFile)
 }
 
+// parseMarkedFiles は $JU の展開結果を行ごとに分割してパス一覧にします。結果が空の場合はカーソル位置のファイルを返します。
 func parseMarkedFiles(result string, getCurrentFile func() (string, error)) ([]string, error) {
 	result = strings.TrimSpace(result)
 	if result == "" {
@@ -208,6 +217,7 @@ func parseMarkedFiles(result string, getCurrentFile func() (string, error)) ([]s
 	return files, nil
 }
 
+// extract はあふwの Extract メソッドで変数マクロを展開した文字列を返します。
 func (a *oleAFX) extract(variable string) (string, error) {
 	res, err := oleutil.CallMethod(a.afxw, "Extract", variable)
 	if err != nil {
@@ -218,6 +228,7 @@ func (a *oleAFX) extract(variable string) (string, error) {
 	return value, nil
 }
 
+// Close は afxw.obj の参照を解放し、COMの終了とOSスレッドのロック解除を行います。
 func (a *oleAFX) Close() {
 	defer runtime.UnlockOSThread()
 	defer ole.CoUninitialize()
@@ -230,6 +241,7 @@ func (a *oleAFX) Close() {
 	}
 }
 
+// ensureTrailingBackslash はパス末尾に \ が無い場合に \ を付加して返します。
 func ensureTrailingBackslash(path string) string {
 	if !strings.HasSuffix(path, "\\") {
 		return path + "\\"

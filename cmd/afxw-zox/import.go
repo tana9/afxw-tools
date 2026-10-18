@@ -13,6 +13,7 @@ import (
 	"github.com/tana9/afxw-tools/internal/stringutil"
 )
 
+// runImport はあふwの左右ウィンドウの履歴をz.sh形式の一時ファイルに書き出し、zoxide import でマージします。
 func runImport(ctx context.Context, a afx.AFX) error {
 	dirs, err := a.Histories([]int{afx.WindowLeft, afx.WindowRight})
 	if err != nil {

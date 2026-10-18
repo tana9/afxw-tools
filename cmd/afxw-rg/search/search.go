@@ -271,6 +271,7 @@ func commandError(operation string, err error) error {
 	return fmt.Errorf("%sに失敗しました: %w", operation, err)
 }
 
+// jsonEvent はripgrepのJSON出力1行（イベント種別と一致行のデータ）を表します。
 type jsonEvent struct {
 	Type string `json:"type"`
 	Data struct {

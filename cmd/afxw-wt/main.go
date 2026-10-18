@@ -12,6 +12,7 @@ import (
 
 var version = "dev"
 
+// main は afxw-wt のCLIを定義して実行します。
 func main() {
 	cmd := &cli.Command{
 		Name:    "afxw-wt",

@@ -6,6 +6,7 @@ type MockFinder struct {
 	Err error
 }
 
+// Find は設定された選択インデックスとエラーを返します。
 func (m *MockFinder) Find(items []string) (int, error) {
 	return m.Idx, m.Err
 }

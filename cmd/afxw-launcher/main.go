@@ -15,6 +15,7 @@ import (
 
 var version = "dev"
 
+// main は afxw-launcher のCLIを定義して実行します。
 func main() {
 	cmd := &cli.Command{
 		Name:    "afxw-launcher",
@@ -28,6 +29,7 @@ func main() {
 	cliutil.Run(cmd)
 }
 
+// run は設定を読み込んでメニューを表示し、選択された項目を実行します。
 func run(ctx context.Context) error {
 	if err := singleinstance.Acquire("afxw-launcher"); err != nil {
 		return err
