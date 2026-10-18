@@ -107,8 +107,7 @@ func runPrompted(ctx context.Context, a afx.AFX, f finder.Finder, opts search.Op
 
 		opts.Pattern = keyword
 		err = run(ctx, a, f, opts, query)
-		var notice *cliutil.Notice
-		if errors.As(err, &notice) {
+		if notice, ok := errors.AsType[*cliutil.Notice](err); ok {
 			if _, writeErr := fmt.Fprintln(w, notice.Message); writeErr != nil {
 				return fmt.Errorf("検索結果の表示に失敗しました: %w", writeErr)
 			}

@@ -203,8 +203,7 @@ func TestRun_EmptyHistoryReturnsNotice(t *testing.T) {
 	afxMock := &afxtest.MockAFX{HistoriesResult: []string{}}
 
 	err := run(afxMock, &afxtest.MockFinder{}, nil)
-	var notice *cliutil.Notice
-	if !errors.As(err, &notice) {
+	if _, ok := errors.AsType[*cliutil.Notice](err); !ok {
 		t.Fatalf("cliutil.Noticeが期待されましたが、%T が返りました: %v", err, err)
 	}
 	if afxMock.ExcdPath != "" {

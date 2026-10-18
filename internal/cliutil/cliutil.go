@@ -22,8 +22,7 @@ func (n *Notice) Error() string { return n.Message }
 // Run はCLIコマンドを実行し、エラー時にメッセージを表示して終了します。
 func Run(cmd *cli.Command) {
 	if err := cmd.Run(context.Background(), os.Args); err != nil {
-		var notice *Notice
-		if errors.As(err, &notice) {
+		if notice, ok := errors.AsType[*Notice](err); ok {
 			reportNotice(notice.Message, os.Stdin, os.Stdout, isTerminal(int(os.Stdin.Fd())))
 			return
 		}

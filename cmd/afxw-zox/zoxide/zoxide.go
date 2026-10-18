@@ -78,8 +78,7 @@ func queryWith(ctx context.Context, executable string) ([]Entry, error) {
 	cmd := exec.CommandContext(ctx, executable, "query", "--list", "--score")
 	output, err := cmd.Output()
 	if err != nil {
-		var exitErr *exec.ExitError
-		if errors.As(err, &exitErr) {
+		if exitErr, ok := errors.AsType[*exec.ExitError](err); ok {
 			return nil, fmt.Errorf("zoxideコマンドの実行に失敗しました: %s", string(exitErr.Stderr))
 		}
 		return nil, fmt.Errorf("zoxideコマンドの実行に失敗しました: %w", err)

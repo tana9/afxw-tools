@@ -160,16 +160,14 @@ func classifyFiles(root string, files []string) ([]string, []string, error) {
 		if failed.Load() {
 			break
 		}
-		wg.Add(1)
 		sem <- struct{}{}
-		go func(i int, path string) {
-			defer wg.Done()
+		wg.Go(func() {
 			defer func() { <-sem }()
 			valid[i], errs[i] = isUTF8File(filepath.Join(root, path))
 			if errs[i] != nil {
 				failed.Store(true)
 			}
-		}(i, path)
+		})
 	}
 	wg.Wait()
 
@@ -255,8 +253,7 @@ func runSearch(ctx context.Context, executable string, opts Options, encoding st
 	cmd.Dir = opts.Root
 	output, err := cmd.Output()
 	if err != nil {
-		var exitErr *exec.ExitError
-		if errors.As(err, &exitErr) && exitErr.ExitCode() == 1 {
+		if exitErr, ok := errors.AsType[*exec.ExitError](err); ok && exitErr.ExitCode() == 1 {
 			return nil, nil
 		}
 		return nil, commandError("ripgrep検索", err)
@@ -266,8 +263,7 @@ func runSearch(ctx context.Context, executable string, opts Options, encoding st
 
 // commandError は外部コマンドのエラーへ標準エラー出力を付加します。
 func commandError(operation string, err error) error {
-	var exitErr *exec.ExitError
-	if errors.As(err, &exitErr) && len(exitErr.Stderr) > 0 {
+	if exitErr, ok := errors.AsType[*exec.ExitError](err); ok && len(exitErr.Stderr) > 0 {
 		return fmt.Errorf("%sに失敗しました: %s", operation, strings.TrimSpace(string(exitErr.Stderr)))
 	}
 	return fmt.Errorf("%sに失敗しました: %w", operation, err)

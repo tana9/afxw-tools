@@ -103,8 +103,7 @@ func TestRunNoMatches(t *testing.T) {
 	err := run(context.Background(), &afxtest.MockAFX{}, &afxtest.MockFinder{}, search.Options{}, func(context.Context, search.Options) ([]search.Match, error) {
 		return nil, nil
 	})
-	var notice *cliutil.Notice
-	if !errors.As(err, &notice) {
+	if _, ok := errors.AsType[*cliutil.Notice](err); !ok {
 		t.Fatalf("error = %v, want Notice", err)
 	}
 }

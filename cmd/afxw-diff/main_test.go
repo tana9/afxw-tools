@@ -34,8 +34,7 @@ func TestRunRequiresExactlyTwoPaths(t *testing.T) {
 			t.Fatal("WinMerge should not be started")
 			return nil
 		})
-		var notice *cliutil.Notice
-		if !errors.As(err, &notice) {
+		if _, ok := errors.AsType[*cliutil.Notice](err); !ok {
 			t.Fatalf("paths = %v, error = %v, want Notice", paths, err)
 		}
 	}

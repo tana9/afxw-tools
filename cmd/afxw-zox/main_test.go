@@ -42,8 +42,7 @@ func TestRun_EmptyEntries(t *testing.T) {
 
 	// データベースが空の場合はNoticeで案内する
 	err := run(afxMock, finderMock, query)
-	var notice *cliutil.Notice
-	if !errors.As(err, &notice) {
+	if _, ok := errors.AsType[*cliutil.Notice](err); !ok {
 		t.Fatalf("cliutil.Noticeが期待されましたが、%T が返りました: %v", err, err)
 	}
 

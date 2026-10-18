@@ -112,12 +112,10 @@ func TestAddConcurrentDuplicate(t *testing.T) {
 	var wg sync.WaitGroup
 	errCh := make(chan error, workers)
 	for range workers {
-		wg.Add(1)
-		go func() {
-			defer wg.Done()
+		wg.Go(func() {
 			_, err := Add(path, item)
 			errCh <- err
-		}()
+		})
 	}
 	wg.Wait()
 	close(errCh)

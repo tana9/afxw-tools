@@ -41,8 +41,7 @@ func TestRunSelect_EmptyBookmarks(t *testing.T) {
 
 	// ファイルなし（空のブックマーク）はNoticeで案内する
 	err := runSelect(afxMock, finderMock, bmPath)
-	var notice *cliutil.Notice
-	if !errors.As(err, &notice) {
+	if _, ok := errors.AsType[*cliutil.Notice](err); !ok {
 		t.Fatalf("cliutil.Noticeが期待されましたが、%T が返りました: %v", err, err)
 	}
 
