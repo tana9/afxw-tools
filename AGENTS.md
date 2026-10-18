@@ -29,7 +29,7 @@
 - `task e2e-test` は、あふwを必要とせずに8つの実行ファイルすべてをビルド・実行します。
 - `task lint` は `golangci-lint run ./...` を実行します。
 
-`go test ./internal/configutil` のように特定のパッケージパスを指定すれば、そのパッケージだけを対象にした短いテストサイクルを回せます。このモジュールは `go.mod` で宣言されているとおりGo 1.27を要求します。本プロジェクトはWindows専用(`go-ole`、`golang.org/x/sys/windows` を使用)であり、Windows上でのみ正しくビルド・実行できます。CI(`.github/workflows/ci.yaml`)は `master` へのpushとPRに対して `windows-latest` 上で `go test ./...` と `golangci-lint-action` を実行します。リリース成果物はGoReleaserにより `windows/amd64` 向けにのみ生成され、`v<major>.<minor>.<patch>` 形式のタグpushで `.github/workflows/release.yaml` がトリガーされます。
+`go test ./internal/configutil` のように特定のパッケージパスを指定すれば、そのパッケージだけを対象にした短いテストサイクルを回せます。このモジュールは `go.mod` で宣言されているとおりGo 1.27を要求します。本プロジェクトはWindows専用(`go-ole`、`golang.org/x/sys/windows` を使用)であり、Windows上でのみ正しくビルド・実行できます。CI(`.github/workflows/ci.yaml`)は `master` へのpushとPRに対して `windows-latest` 上で `go test ./...` と `golangci-lint-action` を実行します。リリース成果物はGoReleaserにより `windows/amd64` と `windows/arm64` 向けに生成され、`v<major>.<minor>.<patch>` 形式のタグpushで `.github/workflows/release.yaml` がトリガーされます。
 
 ## コーディングスタイル & 命名規則
 

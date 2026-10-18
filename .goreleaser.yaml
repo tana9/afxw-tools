@@ -15,6 +15,7 @@ builds:
       - windows
     goarch:
       - amd64
+      - arm64
     ldflags:
       - -s -w -X main.version={{.Version}}
 
@@ -27,6 +28,7 @@ builds:
       - windows
     goarch:
       - amd64
+      - arm64
     ldflags:
       - -s -w -X main.version={{.Version}}
 
@@ -39,6 +41,7 @@ builds:
       - windows
     goarch:
       - amd64
+      - arm64
     ldflags:
       - -s -w -X main.version={{.Version}}
 
@@ -51,6 +54,7 @@ builds:
       - windows
     goarch:
       - amd64
+      - arm64
     ldflags:
       - -s -w -X main.version={{.Version}}
 
@@ -63,6 +67,7 @@ builds:
       - windows
     goarch:
       - amd64
+      - arm64
     ldflags:
       - -s -w -X main.version={{.Version}}
 
@@ -75,6 +80,7 @@ builds:
       - windows
     goarch:
       - amd64
+      - arm64
     ldflags:
       - -s -w -X main.version={{.Version}}
 
@@ -87,6 +93,7 @@ builds:
       - windows
     goarch:
       - amd64
+      - arm64
     ldflags:
       - -s -w -X main.version={{.Version}}
 
@@ -99,6 +106,7 @@ builds:
       - windows
     goarch:
       - amd64
+      - arm64
     ldflags:
       - -s -w -X main.version={{.Version}}
 
