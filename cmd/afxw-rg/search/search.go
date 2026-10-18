@@ -123,13 +123,7 @@ func normalizeEncoding(encoding string) (string, error) {
 
 // listFiles はripgrepのフィルタ規則に従って検索対象ファイルを列挙します。
 func listFiles(ctx context.Context, executable string, opts Options) ([]string, error) {
-	args := []string{"--files", "--null"}
-	if opts.Hidden {
-		args = append(args, "--hidden")
-	}
-	if opts.Glob != "" {
-		args = append(args, "--glob", opts.Glob)
-	}
+	args := append([]string{"--files", "--null"}, filterArgs(opts)...)
 	cmd := exec.CommandContext(ctx, executable, args...)
 	cmd.Dir = opts.Root
 	output, err := cmd.Output()
@@ -234,18 +228,26 @@ func batches(files []string, maxSize int) [][]string {
 	return result
 }
 
-// runSearch は同じ文字コードのファイル群をripgrepで検索します。
-func runSearch(ctx context.Context, executable string, opts Options, encoding string, paths []string) ([]Match, error) {
-	args := []string{"--json", "--color", "never", "--encoding", encoding}
-	if opts.FixedStrings {
-		args = append(args, "--fixed-strings")
-	}
+// filterArgs は検索対象の絞り込み条件をripgrepの引数に変換します。
+// ファイル列挙と検索で対象がずれないよう、両方でこの関数を使います。
+func filterArgs(opts Options) []string {
+	var args []string
 	if opts.Hidden {
 		args = append(args, "--hidden")
 	}
 	if opts.Glob != "" {
 		args = append(args, "--glob", opts.Glob)
 	}
+	return args
+}
+
+// runSearch は同じ文字コードのファイル群をripgrepで検索します。
+func runSearch(ctx context.Context, executable string, opts Options, encoding string, paths []string) ([]Match, error) {
+	args := []string{"--json", "--color", "never", "--encoding", encoding}
+	if opts.FixedStrings {
+		args = append(args, "--fixed-strings")
+	}
+	args = append(args, filterArgs(opts)...)
 	args = append(args, "-e", opts.Pattern, "--")
 	args = append(args, paths...)
 

@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"os"
 	"path/filepath"
+	"slices"
 	"strings"
 
 	"github.com/tana9/afxw-tools/internal/cliutil"
@@ -11,15 +12,9 @@ import (
 	"github.com/tana9/afxw-tools/internal/configutil"
 )
 
+// LoadFrom は指定パスの設定ファイルを読み込んで検証します。
 func LoadFrom(path string) (*Config, error) {
-	cfg, err := configutil.LoadFrom[Config](path)
-	if err != nil {
-		return nil, err
-	}
-	if err := cfg.Validate(); err != nil {
-		return nil, fmt.Errorf("設定ファイル %q が不正です: %w", path, err)
-	}
-	return cfg, nil
+	return configutil.LoadValidated[Config](path)
 }
 
 func Load() (*Config, error) {
@@ -36,7 +31,7 @@ func Load() (*Config, error) {
 // load はユーザー設定→ローカル設定の順に読み込み、どちらも無ければデフォルト設定を生成します。
 // ユーザー設定が存在する場合のみ、不足メニューの移行(migrateUserConfig)を行います。
 func load(userConfigPath, localConfigPath string) (*Config, error) {
-	cfg, err := tryLoadValidated(userConfigPath)
+	cfg, err := configutil.TryLoadValidated[Config](userConfigPath)
 	if err != nil {
 		return nil, err
 	}
@@ -44,7 +39,7 @@ func load(userConfigPath, localConfigPath string) (*Config, error) {
 		return migrateUserConfig(userConfigPath, cfg)
 	}
 
-	cfg, err = tryLoadValidated(localConfigPath)
+	cfg, err = configutil.TryLoadValidated[Config](localConfigPath)
 	if err != nil {
 		return nil, err
 	}
@@ -52,19 +47,8 @@ func load(userConfigPath, localConfigPath string) (*Config, error) {
 		return cfg, nil
 	}
 
-	return createDefaultConfig(userConfigPath), nil
-}
-
-// tryLoadValidated は設定ファイルを読み込み、存在すれば検証まで行います。
-// ファイルが存在しない場合は (nil, nil) を返します。
-func tryLoadValidated(path string) (*Config, error) {
-	cfg, err := configutil.TryLoad[Config](path)
-	if err != nil || cfg == nil {
-		return cfg, err
-	}
-	if err := cfg.Validate(); err != nil {
-		return nil, fmt.Errorf("設定ファイル %q が不正です: %w", path, err)
-	}
+	cfg = DefaultConfig()
+	configutil.WriteDefault(userConfigPath, cfg)
 	return cfg, nil
 }
 
@@ -82,28 +66,14 @@ func migrateUserConfig(path string, cfg *Config) (*Config, error) {
 	return cfg, nil
 }
 
-func createDefaultConfig(path string) *Config {
-	cfg := DefaultConfig()
-	if err := configutil.Write(path, cfg); err != nil {
-		fmt.Fprintf(os.Stderr, "警告: 設定ファイルの作成に失敗しました: %v\n", err)
-	} else {
-		fmt.Fprintf(os.Stderr, "デフォルト設定ファイルを作成しました: %s\n", path)
-	}
-	return cfg
-}
-
 // addMissingStandardMenuItems は設定に存在しない標準メニューを追加し、追加した項目を返します。
 func addMissingStandardMenuItems(cfg *Config) []MenuItem {
 	standardItems := standardMenuItems()
 	missing := make([]MenuItem, 0, len(standardItems))
 	for _, standard := range standardItems {
-		found := false
-		for _, item := range cfg.Menu {
-			if strings.EqualFold(filepath.Base(item.Command), standard.Command) {
-				found = true
-				break
-			}
-		}
+		found := slices.ContainsFunc(cfg.Menu, func(item MenuItem) bool {
+			return strings.EqualFold(filepath.Base(item.Command), standard.Command)
+		})
 		if !found {
 			cfg.Menu = append(cfg.Menu, standard)
 			missing = append(missing, standard)

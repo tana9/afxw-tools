@@ -140,13 +140,11 @@ func (m model) View() string {
 	sb.WriteString("\n\n")
 
 	for i, item := range m.cfg.Menu {
-		cursor := " "
+		cursor, style := " ", normalStyle
 		if m.cursor == i {
-			cursor = ">"
-			sb.WriteString(selectedStyle.Render(fmt.Sprintf("%s %d. %s", cursor, i+1, item.Name)))
-		} else {
-			sb.WriteString(normalStyle.Render(fmt.Sprintf("%s %d. %s", cursor, i+1, item.Name)))
+			cursor, style = ">", selectedStyle
 		}
+		sb.WriteString(style.Render(fmt.Sprintf("%s %d. %s", cursor, i+1, item.Name)))
 		sb.WriteString("\n")
 		if strings.TrimSpace(item.Description) != "" {
 			sb.WriteString(descStyle.Render(item.Description))

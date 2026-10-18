@@ -95,15 +95,15 @@ func parseQueryOutput(output string) ([]Entry, error) {
 		if line == "" {
 			continue
 		}
-		parts := strings.SplitN(line, " ", 2)
-		if len(parts) != 2 {
+		scoreText, path, ok := strings.Cut(line, " ")
+		if !ok {
 			continue
 		}
-		score, err := strconv.ParseFloat(parts[0], 64)
+		score, err := strconv.ParseFloat(scoreText, 64)
 		if err != nil {
 			continue
 		}
-		raw = append(raw, Entry{Path: parts[1], Score: score})
+		raw = append(raw, Entry{Path: path, Score: score})
 	}
 
 	// zoxide は --all が指定されない限り利用不能なディレクトリを出力しない。

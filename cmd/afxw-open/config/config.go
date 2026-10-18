@@ -43,28 +43,9 @@ func (c *Config) Validate() error {
 	return nil
 }
 
+// LoadFrom は指定パスの設定ファイルを読み込んで検証します。
 func LoadFrom(path string) (*Config, error) {
-	cfg, err := configutil.LoadFrom[Config](path)
-	if err != nil {
-		return nil, err
-	}
-	if err := cfg.Validate(); err != nil {
-		return nil, fmt.Errorf("設定ファイル %q が不正です: %w", path, err)
-	}
-	return cfg, nil
-}
-
-// tryLoadValidated は設定ファイルを読み込み、存在すれば検証まで行います。
-// ファイルが存在しない場合は (nil, nil) を返します。
-func tryLoadValidated(path string) (*Config, error) {
-	cfg, err := configutil.TryLoad[Config](path)
-	if err != nil || cfg == nil {
-		return cfg, err
-	}
-	if err := cfg.Validate(); err != nil {
-		return nil, fmt.Errorf("設定ファイル %q が不正です: %w", path, err)
-	}
-	return cfg, nil
+	return configutil.LoadValidated[Config](path)
 }
 
 func Load() (*Config, error) {
@@ -80,7 +61,7 @@ func Load() (*Config, error) {
 // load はユーザー設定→ローカル設定の順に読み込み、どちらも無ければデフォルト設定を生成します。
 func load(configPath, localPath string) (*Config, error) {
 	for _, path := range []string{configPath, localPath} {
-		cfg, err := tryLoadValidated(path)
+		cfg, err := configutil.TryLoadValidated[Config](path)
 		if err != nil {
 			return nil, err
 		}
@@ -90,11 +71,7 @@ func load(configPath, localPath string) (*Config, error) {
 	}
 
 	cfg := DefaultConfig()
-	if err := configutil.Write(configPath, cfg); err != nil {
-		fmt.Fprintf(os.Stderr, "警告: 設定ファイルの作成に失敗しました: %v\n", err)
-	} else {
-		fmt.Fprintf(os.Stderr, "デフォルト設定ファイルを作成しました: %s\n", configPath)
-	}
+	configutil.WriteDefault(configPath, cfg)
 	return cfg, nil
 }
 

@@ -28,6 +28,49 @@ func TryLoad[T any](path string) (*T, error) {
 	return cfg, err
 }
 
+// validatable は Validate メソッドを持つ *T を表す型制約です。
+type validatable[T any] interface {
+	*T
+	Validate() error
+}
+
+// LoadValidated はTOMLファイルを読み込み、Validateで検証した値を返します。
+func LoadValidated[T any, PT validatable[T]](path string) (*T, error) {
+	cfg, err := LoadFrom[T](path)
+	if err != nil {
+		return nil, err
+	}
+	return validate[T, PT](path, cfg)
+}
+
+// TryLoadValidated はTOMLファイルを読み込んで検証し、ファイルが存在しない場合は (nil, nil) を返します。
+// 検証エラーがos.ErrNotExistをラップしていてもファイル不在と誤判定しないよう、不在判定は読み込み時のみ行います。
+func TryLoadValidated[T any, PT validatable[T]](path string) (*T, error) {
+	cfg, err := TryLoad[T](path)
+	if err != nil || cfg == nil {
+		return cfg, err
+	}
+	return validate[T, PT](path, cfg)
+}
+
+// validate は読み込んだ設定を検証し、不正な場合はファイルパス付きのエラーを返します。
+func validate[T any, PT validatable[T]](path string, cfg *T) (*T, error) {
+	if err := PT(cfg).Validate(); err != nil {
+		return nil, fmt.Errorf("設定ファイル %q が不正です: %w", path, err)
+	}
+	return cfg, nil
+}
+
+// WriteDefault はデフォルト設定をpathに書き込み、結果を標準エラー出力へ表示します。
+// 書き込みに失敗してもデフォルト設定で動作を継続できるよう、エラーは警告表示に留めます。
+func WriteDefault(path string, cfg any) {
+	if err := Write(path, cfg); err != nil {
+		fmt.Fprintf(os.Stderr, "警告: 設定ファイルの作成に失敗しました: %v\n", err)
+		return
+	}
+	fmt.Fprintf(os.Stderr, "デフォルト設定ファイルを作成しました: %s\n", path)
+}
+
 // Write は cfg をTOML形式でpathに書き込みます。親ディレクトリが無ければ作成します。
 // 既存ファイルがある場合は上書きします。
 func Write(path string, cfg any) error {

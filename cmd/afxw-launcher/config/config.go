@@ -70,28 +70,13 @@ func (c *Config) FindCommand(command string) (string, error) {
 	return cmdutil.Find(command)
 }
 
-// openMenuItem は「ファイルを開く」の標準メニュー項目を返します。
-// DefaultConfigと既存ユーザー設定への移行処理の両方から参照するため、メニュー順に依存しない独立した関数にしています。
-func openMenuItem() MenuItem {
-	return MenuItem{Name: "ファイルを開く", Description: "選択したファイルをプログラムで開く", Command: "afxw-open.exe", Args: []string{"{files}"}}
-}
-
-// windowsTerminalMenuItem は「Windows Terminalで開く」の標準メニュー項目を返します。
-func windowsTerminalMenuItem() MenuItem {
-	return MenuItem{Name: "Windows Terminalで開く", Description: "現在のフォルダをWindows Terminalで開く", Command: "afxw-wt.exe", Args: []string{}}
-}
-
-// ripgrepMenuItem は「キーワード検索」の標準メニュー項目を返します。
-func ripgrepMenuItem() MenuItem {
-	return MenuItem{Name: "キーワード検索", Description: "現在のフォルダ以下をripgrepで検索", Command: "afxw-rg.exe", Args: []string{}}
-}
-
-// winMergeMenuItem は「WinMergeで比較」の標準メニュー項目を返します。
-func winMergeMenuItem() MenuItem {
-	return MenuItem{Name: "WinMergeで比較", Description: "マークした2項目をWinMergeで比較", Command: "afxw-diff.exe", Args: []string{}}
-}
-
 // standardMenuItems は新規設定と既存設定への移行で共有する標準メニューを返します。
+// 呼び出し側が変更しても互いに影響しないよう、呼び出しごとに新しいスライスを返します。
 func standardMenuItems() []MenuItem {
-	return []MenuItem{openMenuItem(), windowsTerminalMenuItem(), ripgrepMenuItem(), winMergeMenuItem()}
+	return []MenuItem{
+		{Name: "ファイルを開く", Description: "選択したファイルをプログラムで開く", Command: "afxw-open.exe", Args: []string{"{files}"}},
+		{Name: "Windows Terminalで開く", Description: "現在のフォルダをWindows Terminalで開く", Command: "afxw-wt.exe", Args: []string{}},
+		{Name: "キーワード検索", Description: "現在のフォルダ以下をripgrepで検索", Command: "afxw-rg.exe", Args: []string{}},
+		{Name: "WinMergeで比較", Description: "マークした2項目をWinMergeで比較", Command: "afxw-diff.exe", Args: []string{}},
+	}
 }

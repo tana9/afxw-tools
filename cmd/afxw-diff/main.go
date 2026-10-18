@@ -3,8 +3,6 @@ package main
 import (
 	"context"
 	"fmt"
-	"os"
-	"path/filepath"
 
 	"github.com/tana9/afxw-tools/internal/afx"
 	"github.com/tana9/afxw-tools/internal/cliutil"
@@ -60,16 +58,8 @@ func run(paths []string, winMergePath string, start func(string, []string) error
 // resolveWinMerge はPATH、ユーザー、64bit、32bitの標準インストール先の順に探索します。
 func resolveWinMerge() string {
 	return cmdutil.ResolveExecutable("WinMergeU.exe",
-		executableIn("LOCALAPPDATA", "Programs", "WinMerge", "WinMergeU.exe"),
-		executableIn("ProgramFiles", "WinMerge", "WinMergeU.exe"),
-		executableIn("ProgramFiles(x86)", "WinMerge", "WinMergeU.exe"),
+		cmdutil.EnvPath("LOCALAPPDATA", "Programs", "WinMerge", "WinMergeU.exe"),
+		cmdutil.EnvPath("ProgramFiles", "WinMerge", "WinMergeU.exe"),
+		cmdutil.EnvPath("ProgramFiles(x86)", "WinMerge", "WinMergeU.exe"),
 	)
-}
-
-func executableIn(env string, elems ...string) string {
-	root := os.Getenv(env)
-	if root == "" {
-		return ""
-	}
-	return filepath.Join(append([]string{root}, elems...)...)
 }

@@ -3,8 +3,6 @@ package main
 import (
 	"context"
 	"fmt"
-	"os"
-	"path/filepath"
 
 	"github.com/tana9/afxw-tools/internal/afx"
 	"github.com/tana9/afxw-tools/internal/cliutil"
@@ -55,9 +53,5 @@ func run(dir string, wtPath string, start func(string, []string) error) error {
 // resolveWt はwt.exeのパスを解決します。
 // PATHに無い場合はWindowsAppsの既定エイリアスを確認し、どちらにも無ければ "wt.exe" をそのまま返して実行時にエラーを報告させます。
 func resolveWt() string {
-	var alias string
-	if localAppData := os.Getenv("LOCALAPPDATA"); localAppData != "" {
-		alias = filepath.Join(localAppData, "Microsoft", "WindowsApps", "wt.exe")
-	}
-	return cmdutil.ResolveExecutable("wt.exe", alias)
+	return cmdutil.ResolveExecutable("wt.exe", cmdutil.EnvPath("LOCALAPPDATA", "Microsoft", "WindowsApps", "wt.exe"))
 }

@@ -48,6 +48,16 @@ func ResolveExecutable(command string, candidates ...string) string {
 	return command
 }
 
+// EnvPath は環境変数envの値を起点にelemsを連結したパスを返します。
+// 環境変数が未設定の場合は空文字列を返すため、ResolveExecutableの候補にそのまま渡せます。
+func EnvPath(env string, elems ...string) string {
+	root := os.Getenv(env)
+	if root == "" {
+		return ""
+	}
+	return filepath.Join(append([]string{root}, elems...)...)
+}
+
 // StartCommand はコマンドを非同期で起動します。終了は待ちません。
 func StartCommand(path string, args []string) error {
 	return exec.Command(path, args...).Start()

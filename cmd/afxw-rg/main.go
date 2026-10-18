@@ -57,7 +57,7 @@ func main() {
 
 			opts := search.Options{
 				Root:         root,
-				Encoding:     strings.ToLower(cmd.String("encoding")),
+				Encoding:     cmd.String("encoding"),
 				Glob:         cmd.String("glob"),
 				FixedStrings: cmd.Bool("fixed-strings"),
 				Hidden:       cmd.Bool("hidden"),

@@ -149,10 +149,11 @@ func (a *oleAFX) EXCDFile(path string) error {
 }
 
 func (a *oleAFX) execEXCD(path string) error {
-	_, err := oleutil.CallMethod(a.afxw, "Exec", fmt.Sprintf("&EXCD -P\"%s\"", path))
+	res, err := oleutil.CallMethod(a.afxw, "Exec", fmt.Sprintf("&EXCD -P\"%s\"", path))
 	if err != nil {
 		return fmt.Errorf("EXCD呼び出しに失敗しました: %w", err)
 	}
+	_ = res.Clear()
 	return nil
 }
 
@@ -195,9 +196,9 @@ func parseMarkedFiles(result string, getCurrentFile func() (string, error)) ([]s
 		}
 		return []string{f}, nil
 	}
-	lines := strings.Split(strings.ReplaceAll(result, "\r\n", "\n"), "\n")
-	files := make([]string, 0, len(lines))
-	for _, line := range lines {
+	var files []string
+	for line := range strings.SplitSeq(result, "\n") {
+		// CRLF区切りの \r もTrimSpaceで取り除かれる
 		path := strings.TrimSpace(line)
 		path = strings.Trim(path, "\"")
 		if path != "" {

@@ -15,6 +15,18 @@ func makeExe(t *testing.T, dir, name string) string {
 	return p
 }
 
+func TestEnvPath(t *testing.T) {
+	t.Setenv("AFXW_TOOLS_TEST_ROOT", `C:\Tools`)
+	if got, want := EnvPath("AFXW_TOOLS_TEST_ROOT", "WinMerge", "WinMergeU.exe"), `C:\Tools\WinMerge\WinMergeU.exe`; got != want {
+		t.Errorf("EnvPath() = %q, want %q", got, want)
+	}
+
+	t.Setenv("AFXW_TOOLS_TEST_ROOT", "")
+	if got := EnvPath("AFXW_TOOLS_TEST_ROOT", "WinMerge"); got != "" {
+		t.Errorf("EnvPath() = %q, want empty for unset env", got)
+	}
+}
+
 func TestFind_AbsolutePath_Exists(t *testing.T) {
 	p := makeExe(t, t.TempDir(), "tool.exe")
 	got, err := Find(p)
